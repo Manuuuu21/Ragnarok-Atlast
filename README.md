@@ -19,6 +19,10 @@ File selection, parsing, rendering, and exports happen in the browser.
 
 Open [Data Builder](http://localhost/ragnarok-database-builder/builder.php) and select the files for the export you need. You can upload both groups together to build both tables and resolve item references in monster drops. Use Renewal server databases and client files that match your game installation.
 
+### Files for `map-data.js`
+
+Upload the generated map/ folder to retrieve all files that contain image assets.
+
 ### Files for `monster-data.js`
 
 | Upload | Purpose |
