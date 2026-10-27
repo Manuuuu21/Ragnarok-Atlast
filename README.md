@@ -1,5 +1,3 @@
-README Ragnarök-Atlast
-
 # Ragnarok Atlas
 
 A local PHP, HTML, CSS, JavaScript, and jQuery toolkit for **rAthena Renewal** data exports and artwork. It includes a data importer, GRF extractor, and ACT/SPR-to-GIF converter.
