@@ -28,7 +28,6 @@ Upload the generated map/ folder to retrieve all files that contain image assets
 | Upload | Purpose |
 | --- | --- |
 | `npc/re/mobs/**/*.txt` | Optional static monster spawn maps and quantities, combined per monster, map, and respawn timing. |
-| `npc/re/scripts_monsters.conf` | Optional enabled-file list; excludes unlisted spawn files when selected. Include the referenced TXT files too. |
 | `mob_db.yml` | Monster IDs, names, stats, drops, and MVP rewards from the server database, normally `db/re/mob_db.yml`. |
 | `jobname.lub` | Client sprite resource names used to generate each mapped monster's `spriteName` and `gif` fields. |
 | `npcidentity.lub` | Client identity constants and numeric IDs, used to connect `jobname.lub` entries to monster IDs. |
