@@ -1,0 +1,94 @@
+xxhash128.c
+/*
+ * xxHash - Extremely Fast Hash algorithm
+ * Header File
+ * Copyright (C) 2012-2020 Yann Collet
+ *
+ * BSD 2-Clause License (https://www.opensource.org/licenses/bsd-license.php)
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are
+ * met:
+ *
+ *    * Redistributions of source code must retain the above copyright
+ *      notice, this list of conditions and the following disclaimer.
+ *    * Redistributions in binary form must reproduce the above
+ *      copyright notice, this list of conditions and the following disclaimer
+ *      in the documentation and/or other materials provided with the
+ *      distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+ * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+ * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+ * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+ * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ * You can contact the author at:
+ *   - xxHash homepage: https://www.xxhash.com
+ *   - xxHash source repository: https://github.com/Cyan4973/xxHash
+ *
+ * Modified for hash-wasm by Dani Biró
+ */
+
+xxhash32.c
+// //////////////////////////////////////////////////////////
+// xxhash32.h
+// Copyright (c) 2016 Stephan Brumme. All rights reserved.
+// see http://create.stephan-brumme.com/disclaimer.html
+//
+// XXHash (32 bit), based on Yann Collet's descriptions, see
+// http://cyan4973.github.io/xxHash/
+//
+// Modified for hash-wasm by Dani Biró
+//
+
+#define WITH_BUFFER
+#include "hash-wasm.h"
+#define bswap32 __builtin_bswap32
+
+static const uint32_t Prime1 = 2654435761U;
+static const uint32_t Prime2 = 2246822519U;
+static const uint32_t Prime3 = 3266489917U;
+static const uint32_t Prime4 = 668265263U;
+static const uint32_t Prime5 = 374761393U;
+
+// temporarily store up to 15 bytes between multiple add() calls
+#define MAX_BUFFER_SIZE (15 + 1)
+
+// internal state and temporary buffer
+struct XXHash32_CTX {
+  uint32_t state[4];  // state[2] == seed if totalLength < MAX_BUFFER_SIZE
+  unsigned char buffer[MAX_BUFFER_SIZE];
+  unsigned int bufferSize;
+  uint64_t totalLength;
+};
+
+static struct XXHash32_CTX sctx;
+
+// rotate bits, should compile to a single CPU instruction (ROL)
+static inline uint32_t rotateLeft(uint32_t x, unsigned char bits) {
+  return (x << bits) | (x >> (32 - bits));
+}
+
+// process a block of 4x4 bytes, this is the main part of the XXHash32
+// algorithm
+static inline void process(
+  const void* data, uint32_t* state0, uint32_t* state1,
+  uint32_t* state2, uint32_t* state3
+) {
+  const uint32_t* block = (const uint32_t*)data;
+  *state0 = rotateLeft(*state0 + block[0] * Prime2, 13) * Prime1;
+  *state1 = rotateLeft(*state1 + block[1] * Prime2, 13) * Prime1;
+  *state2 = rotateLeft(*state2 + block[2] * Prime2, 13) * Prime1;
+  *state3 = rotateLeft(*state3 + block[3] * Prime2, 13) * Prime1;
+}
+
+// create new XXHash (32 bit)
+/** @param seed your seed value, even zero is a valid seed and e.g. used by LZ4
+ * **/
