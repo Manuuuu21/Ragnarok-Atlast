@@ -15,6 +15,12 @@
     ['Headgear (Middle)', ['Head_Mid', 'Costume_Head_Mid']],
     ['Headgear (Low)', ['Head_Low', 'Costume_Head_Low']]
   ]);
+  const costumeLocations = new Map([
+    ['Costume Garment', 'Costume_Garment'],
+    ['Costume Headgear (Low)', 'Costume_Head_Low'],
+    ['Costume Headgear (Middle)', 'Costume_Head_Mid'],
+    ['Costume Headgear (Top)', 'Costume_Head_Top']
+  ]);
   const databases = {};
   const loading = {};
   const state = { kind: 'item', query: '', category: '', sort: 'id', page: 1, view: 'detailed' };
@@ -213,7 +219,7 @@
     }
     const values = [...new Set(databases[state.kind].records.map(category))].sort();
     if (state.kind === 'item') {
-      for (const value of ['Garment', 'Shield', ...headgearLocations.keys()]) if (!values.includes(value)) values.push(value);
+      for (const value of ['Garment', 'Shield', ...headgearLocations.keys(), ...costumeLocations.keys()]) if (!values.includes(value)) values.push(value);
       values.sort();
     }
     if (state.kind === 'monster') values.unshift('MVP');
@@ -281,6 +287,8 @@
     matches = db.records.filter(record => {
       const matchesCategory = !state.category || (state.kind === 'monster' && state.category === 'MVP'
         ? record.server?.Modes?.Mvp === true
+        : state.kind === 'item' && costumeLocations.has(state.category)
+        ? record.server?.Locations?.[costumeLocations.get(state.category)] === true
         : state.kind === 'item' && state.category === 'Garment'
         ? record.server?.Locations?.Garment === true
         : state.kind === 'item' && state.category === 'Shield'
