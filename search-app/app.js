@@ -389,7 +389,9 @@
     const sortedDrops = [...list].sort((a, b) => (b.Rate ?? -1) - (a.Rate ?? -1));
     return `<section class="drops"><h4>${title}</h4>${sortedDrops.map(drop => {
       const item = databases.item?.byAegis.get(drop.Item);
-      return `<div class="drop-row"><button type="button" class="drop-link drop-item-link" data-aegis="${escape(drop.Item)}"><span class="drop-item-icon" aria-hidden="true">${item ? art(item,'item') : placeholder}</span><span>${escape(item?.name || drop.Item.replaceAll('_',' '))}</span></button><span class="drop-rate">${drop.Rate != null ? `${(drop.Rate/100).toLocaleString(undefined,{maximumFractionDigits:2})}%` : 'Rate unavailable'}</span></div>`;
+      const slots = item?.server?.Slots ?? item?.client?.slotCount ?? 0;
+      const showSlots = slots > 0 || /^(weapon|armor|shadowgear)$/i.test(item?.server?.Type || '');
+      return `<div class="drop-row"><button type="button" class="drop-link drop-item-link" data-aegis="${escape(drop.Item)}"><span class="drop-item-icon" aria-hidden="true">${item ? art(item,'item') : placeholder}</span><span>${escape(item?.name || drop.Item.replaceAll('_',' '))}${showSlots ? ` <span class="slots">[${escape(slots)}]</span>` : ''}</span></button><span class="drop-rate">${drop.Rate != null ? `${(drop.Rate/100).toLocaleString(undefined,{maximumFractionDigits:2})}%` : 'Rate unavailable'}</span></div>`;
     }).join('')}</section>`;
   }
   function droppedBy(record) {
