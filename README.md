@@ -27,7 +27,6 @@ The PHP server needs permission to create and write `search-app/lib/` to save ge
 | [`sprites.php`](sprites.php) | Sprite Studio: preview extracted ACT/SPR pairs and export GIFs or a ZIP. |
 | [`search-app/index.html`](search-app/index.html) | Data Search: browse items, monsters, and maps, including headgear previews. |
 | [`index.php`](index.php) | Redirects to `builder.php` with HTTP status 302. |
-| [`search.php`](search.php) | Legacy URL that also redirects to `builder.php`. |
 | [`save-data.php`](save-data.php) | Endpoint used by Data Builder to save generated tables. |
 
 File selection, parsing, rendering, and downloads happen in the browser. After a successful build, generated tables are sent to this PHP server and saved in `search-app/lib/`.
