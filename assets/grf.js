@@ -1,6 +1,6 @@
-import { OUTPUT_FOLDERS } from './grf-core.js?v=3';
-import { ZipExport } from './zip-export.js';
-import { FolderExport } from './folder-export.js';
+import { OUTPUT_FOLDERS } from './grf-core.js?v=5';
+import { ZipExport } from './zip-export.js?v=2';
+import { FolderExport } from './folder-export.js?v=2';
 import { openZipDestination } from './zip-destination.js';
 
 const $ = window.jQuery;
@@ -38,18 +38,18 @@ $('#grf-file').on('change', function () {
   $('#grf-progress').val(0); $('#grf-summary').text(file.name); $('#grf-zip-download').prop('hidden', true);
   for (const folder of OUTPUT_FOLDERS) $(`#grf-count-${folder}`).text('—');
   report([]); status('Reading GRF file table…');
-  const activeWorker = worker = new Worker('assets/grf-worker.js?v=3', { type: 'module' });
+  const activeWorker = worker = new Worker('assets/grf-worker.js?v=7', { type: 'module' });
   activeWorker.onerror = event => { if (worker === activeWorker) stop(event.message || 'GRF worker failed.'); };
   activeWorker.onmessage = async ({ data }) => {
     if (worker !== activeWorker) return;
     if (data.type === 'ready') {
       ready = true; busy = false; total = data.total;
       for (const folder of OUTPUT_FOLDERS) {
-        const count = data.counts[folder], noun = folder === 'monster' ? 'pair' : 'file';
+        const count = data.counts[folder], noun = ['monster', 'sprite'].includes(folder) ? 'pair' : 'file';
         $(`#grf-count-${folder}`).text(`${count.toLocaleString()} ${noun}${count === 1 ? '' : 's'}`);
       }
       report(data.problems);
-      status(total ? `${total.toLocaleString()} resources ready from ${data.entries.toLocaleString()} archive entries.` : 'No supported resources found in the requested paths. Check the archive and filename encoding.');
+      status(total ? `${total.toLocaleString()} resources found. Click Download as ZIP or Extract to folder to begin.` : 'No supported resources found. Check the archive and filename encoding.');
       controls();
     } else if (data.type === 'progress') {
       $('#grf-progress').val(data.total ? data.done / data.total * 100 : 0); status(data.message);
@@ -84,6 +84,7 @@ $('#grf-file').on('change', function () {
         }
         if (worker !== activeWorker) return;
         report(data.problems); $('#grf-progress').val(100);
+        $('#grf-count-sprite').text(`${data.counts.sprite.toLocaleString()} ${data.counts.sprite === 1 ? 'pair' : 'pairs'}`);
         status(`${data.successful.toLocaleString()} resources exported${data.problems.length ? `; ${data.problems.length} ${data.problems.length === 1 ? 'issue' : 'issues'} listed in the report` : ''}. ${label}`);
       } catch (error) {
         if (worker !== activeWorker) return;

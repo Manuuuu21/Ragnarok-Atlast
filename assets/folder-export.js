@@ -1,4 +1,4 @@
-import { OUTPUT_FOLDERS, safeGrfPath } from './grf-core.js';
+import { OUTPUT_FOLDERS, safeGrfPath } from './grf-core.js?v=5';
 
 function hashName(value) {
   let hash = 2166136261;

@@ -1,5 +1,5 @@
 import { ZipWriter, Uint8ArrayReader } from './vendor/zip-native-2.20.0.js';
-import { OUTPUT_FOLDERS, safeGrfPath } from './grf-core.js';
+import { OUTPUT_FOLDERS, safeGrfPath } from './grf-core.js?v=5';
 
 // A single archive is written incrementally. The producer waits for add() before
 // sending the next file, so only the current asset and ZIP directory metadata are

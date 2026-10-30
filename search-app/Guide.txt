@@ -1,0 +1,55 @@
+STEP 6 AFTER DOWNLOADED
+
+
+1. Download the GitHub ragnarok-atlast - DONE
+2. Run the ragnarok-atlast at your own localhost Web Server with PHP support! - DONE
+   - The main goal here is to run in localhost the builder.php
+   - You need to have XAMPP to have your own localhost web server.
+
+3. generate the item-data.js, monster-data.js, map-data.js
+ - item_db_equip.yml - You can see this in your rAthena file. - DONE
+ - item_db_usable.yml - You can see this in your rAthena file. - DONE
+ - item_db_etc.yml - You can see this in your rAthena file. - DONE
+ - iteminfo.lua - You can see this in your kro_client file. - DONE
+ - num2cardillustnametable.txt - You can get this in your own data.grf (just extract it) - DONE
+
+For monster-data.js
+  - npc/re/mob/ folder. Just upload the whole folder. You can see this in your rAthena file. - DONE
+  - jobname.lub - You can get this in your own data.grf (just extract it) - DONE
+  - npcidentity.lub - You can get this in your own data.grf (just extract it) - DONE
+  - mob_db.yml - You can see this in your rAthena file. - DONE
+
+For map-data.js
+  - upload the mapnametable.txt - You can get this in your own data.grf (just extract it) - DONE
+
+OPTIONAL: use generated map/ folder that contains all MAP images after generated assets from data.grf to generate the map-data.js
+  - 
+
+6. PLACE IT in your search-app/lib/ folder. - DONE
+
+==========
+
+
+
+
+
+
+
+
+Generate your assets (IMAGES) using your data.grf, 
+1. Run the localhost/grf.php and upload your data.grf - DONE
+   - This will extract all IMG from the following:
+      a. cardbmp/
+      a. collection/
+      a. item/
+      a. map/
+      a. monster/
+      a. sprite/
+
+2. Unzip the generated assets and place it ALL in the
+      a. search-app/img/
+    
+
+
+
+

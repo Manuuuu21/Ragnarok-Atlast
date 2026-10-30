@@ -48,11 +48,12 @@ export class Renderer {
     this.cache.set(key,result); this.cachePixels += image.width*image.height;
     return result;
   }
-  draw(target, frame, bounds, background = null) {
+  draw(target, frame, bounds, background = null, clear = true) {
     if (target.width !== bounds.width) target.width = bounds.width;
     if (target.height !== bounds.height) target.height = bounds.height;
     const ctx = target.getContext('2d', { willReadFrequently: true });
-    ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,target.width,target.height);
+    ctx.setTransform(1,0,0,1,0,0);
+    if (clear) ctx.clearRect(0,0,target.width,target.height);
     if (background) { ctx.fillStyle = background; ctx.fillRect(0,0,target.width,target.height); }
     ctx.imageSmoothingEnabled = false;
     for (const layer of frame) {

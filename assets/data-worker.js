@@ -1,4 +1,5 @@
-import { parseDatabase, buildTables, isCardIllustrationTable } from './data-core.js?v=maps-4';
+import { parseDatabase, buildTables, isCardIllustrationTable } from './data-core.js?v=upload-checklist-1';
+import { inspectUploads, missingUploadWarnings } from './upload-checklist.js?v=upload-checklist-2';
 import { isMapBitmap, parseMapBitmap } from './map-data.js?v=maps-4';
 import { decodeSource } from './text-decoder.js';
 self.onmessage = async ({data}) => {
@@ -22,7 +23,12 @@ self.onmessage = async ({data}) => {
     } catch (e) { errors.push(`${name}: ${e.message}`); }
     self.postMessage({type:'progress',done:i+1,total:data.files.length});
   }
-  if (errors.length) { self.postMessage({type:'errors',errors,decoding}); return; }
-  try { self.postMessage({type:'complete',tables:buildTables(parsed),decoding}); }
-  catch (e) { self.postMessage({type:'errors',errors:[e.message],decoding}); }
+  const checklist = inspectUploads(data.files, parsed);
+  if (errors.length) { self.postMessage({type:'errors',errors,decoding,checklist}); return; }
+  try {
+    const tables = buildTables(parsed);
+    tables.warnings.unshift(...missingUploadWarnings(checklist));
+    self.postMessage({type:'complete',tables,decoding,checklist});
+  }
+  catch (e) { self.postMessage({type:'errors',errors:[e.message],decoding,checklist}); }
 };

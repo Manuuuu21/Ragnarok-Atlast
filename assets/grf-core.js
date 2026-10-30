@@ -2,7 +2,7 @@ import { decodeFull, decodeHeader } from './vendor/grf-des.js';
 import { decodeArchiveKeys, decodeProtectedEntry } from './grf-protected.js';
 
 const HEADER_SIZE = 46;
-export const OUTPUT_FOLDERS = ['cardbmp', 'collection', 'item', 'map', 'monster'];
+export const OUTPUT_FOLDERS = ['cardbmp', 'collection', 'item', 'map', 'monster', 'sprite'];
 export const GRF_LIMITS = { table: 128 * 1024 * 1024, asset: 64 * 1024 * 1024, entries: 1000000 };
 
 async function read(file, offset, length) {
@@ -52,7 +52,7 @@ export function safeGrfPath(path) {
   return normalized;
 }
 
-function category(path) {
+export function grfCategory(path) {
   const parts = path.split('/'), lower = parts.map(part => part.toLowerCase());
   if (lower[0] !== 'data') return null;
   if (lower[1] === 'texture' && ['À¯ÀúÀÎÅÍÆäÀÌ½º'.toLowerCase(), '유저인터페이스'].includes(lower[2]) && OUTPUT_FOLDERS.slice(0, 4).includes(lower[3]) && parts.length > 4) {
@@ -64,7 +64,7 @@ function category(path) {
   return null;
 }
 
-export async function openGrf(file, encoding = 'windows-1252') {
+export async function openGrf(file, encoding = 'windows-1252', selectEntry = grfCategory) {
   if (!['windows-1252', 'euc-kr', 'utf-8'].includes(encoding)) throw new Error('Unsupported filename encoding.');
   const header = await read(file, 0, HEADER_SIZE), view = new DataView(header.buffer);
   const signature = new TextDecoder().decode(header.subarray(0, 15)), version = view.getUint32(42, true);
@@ -101,7 +101,7 @@ export async function openGrf(file, encoding = 'windows-1252') {
     const entry = { path, compressedSize: data.getUint32(offset, true), alignedSize: data.getUint32(offset + 4, true), size: data.getUint32(offset + 8, true), flags: data.getUint8(offset + 12), offset: HEADER_SIZE + (modern ? Number(data.getBigUint64(offset + 13, true)) : data.getUint32(offset + 13, true)) };
     offset += recordSize;
     if (!(entry.flags & 0x81)) continue;
-    const target = category(path);
+    const target = selectEntry(path);
     if (!target) continue;
     try {
       safeGrfPath(path);
@@ -135,7 +135,7 @@ export function planGrfExport(archive) {
   for (const entry of archive.entries) {
     if (entry.kind === 'texture') {
       if (reserve(entry.output, entry.path)) { textures.push(entry); counts[entry.folder]++; }
-    } else {
+    } else if (entry.kind === 'sprite') {
       const match = entry.path.match(/^(.*)\.(act|spr)$/i), key = match[1].normalize('NFC').toLowerCase(), ext = match[2].toLowerCase();
       if (!groups.has(key)) groups.set(key, { path: match[1], name: match[1].split('/').pop() });
       const pair = groups.get(key);

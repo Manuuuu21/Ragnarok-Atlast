@@ -1,8 +1,9 @@
-import { openGrf, planGrfExport, readGrfEntry } from './grf-core.js?v=3';
+import { openGrf, grfCategory, planGrfExport, readGrfEntry } from './grf-core.js?v=5';
+import { headgearEntry, planHeadgearSprites, extractHeadgearSprites } from './headgear-extraction.js?v=4';
 import { parseSpr, parseAct } from './formats.js';
 import { encodeGif } from './renderer.js';
 
-let archive, plan, acknowledge;
+let archive, plan, spritePlan, acknowledge;
 function emitFile(path, bytes) {
   return new Promise((resolve, reject) => {
     acknowledge = { resolve, reject };
@@ -18,8 +19,14 @@ self.onmessage = async ({ data }) => {
   }
   try {
     if (data.type === 'open') {
-      archive = await openGrf(data.file, data.encoding);
+      archive = await openGrf(data.file, data.encoding, path => grfCategory(path) || headgearEntry(path));
       plan = planGrfExport(archive);
+      spritePlan = null;
+      try {
+        spritePlan = await planHeadgearSprites(archive);
+        plan.counts.sprite = spritePlan.pairs;
+        plan.total += spritePlan.pairs;
+      } catch (error) { plan.problems.push(`sprite/: ${error.message}`); }
       self.postMessage({ type: 'ready', counts: plan.counts, total: plan.total, problems: plan.problems, entries: archive.count });
     } else if (data.type === 'export') {
       if (!archive || !plan) throw new Error('Choose a GRF archive first.');
@@ -33,6 +40,35 @@ self.onmessage = async ({ data }) => {
         return result.path || path;
       }
       let done = 0;
+      if (spritePlan) {
+        let destinationFailed = false, spriteResult;
+        try {
+          spriteResult = await extractHeadgearSprites(archive, async pair => {
+            self.postMessage({ type: 'progress', done: counts.sprite, total: plan.total, message: `Extracting sprite/${pair.path}` });
+            // Numeric output paths are portable. Never publish a catalog that
+            // references a skipped, renamed, or incompletely written pair.
+            try {
+              for (const extension of ['act', 'spr']) {
+                const path = `sprite/${pair.path}.${extension}`;
+                if (await save(path, pair[extension]) !== path) throw new Error(`Could not save ${path} with its catalog filename.`);
+              }
+            } catch (error) { destinationFailed = true; throw error; }
+            counts.sprite++;
+            return pair.path;
+          }, () => {}, readGrfEntry, spritePlan);
+        } catch (error) {
+          if (destinationFailed) throw error;
+          // Only source failures may leave sprite/ unavailable while the other
+          // artwork still exports. Destination errors must abort the export.
+          problems.push(`sprite/: ${error.message}`);
+        }
+        if (spriteResult) {
+          problems.push(...spriteResult.report.problems);
+          await emitFile('sprite/manifest.json', new TextEncoder().encode(JSON.stringify(spriteResult.manifest, null, 2)));
+          await emitFile('sprite/extraction-report.json', new TextEncoder().encode(JSON.stringify(spriteResult.report, null, 2)));
+        }
+        done = plan.counts.sprite;
+      }
       for (const entry of plan.textures) {
         self.postMessage({ type: 'progress', done, total: plan.total, message: `Extracting ${entry.output}` });
         let bytes;

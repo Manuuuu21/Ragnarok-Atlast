@@ -63,11 +63,11 @@ export function parseAct(buffer) {
   if (![11, 20, 21, 22, 23, 24, 25].includes(v)) throw new Error(`ACT ${version.name} is unsupported. Supported: 1.1 and 2.0–2.5.`);
   const count = limit(r.u16(), 1000, 'Action count'); r.skip(10);
   const actions = [];
-  let totalLayers = 0, totalFrames = 0;
+  let totalLayers = 0, totalFrames = 0, totalAnchors = 0;
   for (let a = 0; a < count; a++) {
     const frameCount = limit(r.u32(), 10000, 'Frames per action');
     totalFrames += frameCount; limit(totalFrames, 50000, 'Total frames');
-    const frames = [];
+    const frames = [], anchors = [];
     for (let f = 0; f < frameCount; f++) {
       r.skip(32);
       const layerCount = limit(r.u32(), 1000, 'Layers per frame');
@@ -85,10 +85,19 @@ export function parseAct(buffer) {
         layers.push(layer);
       }
       if (v >= 20) r.skip(4); // Audio event; GIFs have no audio.
-      if (v >= 23) r.skip(limit(r.u32(), 1000, 'Anchor count') * 16);
+      const frameAnchors = [];
+      if (v >= 23) {
+        const anchorCount = limit(r.u32(), 1000, 'Anchor count');
+        totalAnchors += anchorCount; limit(totalAnchors, 500000, 'Total anchors');
+        for (let i = 0; i < anchorCount; i++) {
+          r.skip(4);
+          frameAnchors.push({ x: r.i32(), y: r.i32(), attribute: r.i32() });
+        }
+      }
+      anchors.push(frameAnchors);
       frames.push(layers);
     }
-    actions.push({ frames, delay: 150 });
+    actions.push({ frames, anchors, delay: 150 });
   }
   if (v >= 21) r.skip(limit(r.u32(), 10000, 'Sound count') * 40);
   if (v >= 22) for (const action of actions) {

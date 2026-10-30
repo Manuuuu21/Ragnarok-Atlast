@@ -1,12 +1,27 @@
-<?php require __DIR__ . '/includes/layout.php'; page_start('Data builder','builder.php'); ?>
+<?php
+require __DIR__ . '/includes/builder-session.php';
+$saveToken = builder_save_token();
+header('Cache-Control: no-store');
+require __DIR__ . '/includes/layout.php';
+page_start('Data builder','builder.php');
+?>
+<input type="hidden" id="builder-save-token" value="<?= htmlspecialchars($saveToken, ENT_QUOTES, 'UTF-8') ?>">
 <section class="page-intro"><div><p class="eyebrow">WORKSPACE / DATA BUILDER</p><h1>From server files to searchable data.</h1><p>Combine Renewal databases, client descriptions, and map names. Export clean JavaScript tables, ready for your website.</p></div><span class="format-label">YAML + LUA + TXT → JS</span></section>
 <div class="workspace-grid">
 <section class="panel"><div class="panel-heading"><h2><span class="step">01</span> Source files</h2><span id="file-count" class="muted">No files selected</span></div>
 <div class="upload-zone"><span class="upload-symbol">↥</span><h3>Bring your database together</h3><p>Select iteminfo.lua, item_db_equip.yml, item_db_usable.yml,<br>item_db_etc.yml, mob_db.yml, and your custom overrides.<br>Add num2cardillustnametable.txt for card illustration filenames.<br>Select your <strong>map/</strong> BMP folder or <strong>mapnametable.txt</strong> to create <strong>map-data.js</strong>.</p><div class="actions"><label class="button primary file-label">Choose files<input id="data-files" type="file" multiple accept=".lua,.lub,.yml,.yaml,.txt,.conf,.bmp" aria-label="Choose files"></label><label class="button file-label">Choose folder<input id="data-folder" type="file" multiple webkitdirectory aria-label="Choose folder"></label></div><small>Text Lua, rAthena YAML, monster spawns, card mappings, map BMPs, map names, and legacy TXT · up to 64 MB per file</small></div>
+<section id="upload-checklist" class="upload-checklist" aria-labelledby="upload-checklist-title">
+<h3 id="upload-checklist-title">Upload checklist</h3>
+<p id="upload-checklist-summary" class="checklist-summary" role="status" aria-live="polite" aria-atomic="true">Select files to check for missing uploads.</p>
+<div id="upload-checklist-groups"></div>
+<p class="hint">Check the data sets you want to build. Missing guide files are reminders; partial builds are allowed. Selection is checked by filename; file contents are checked when you build.</p>
+<p class="hint"><code>scripts_monsters.conf</code> is optional. It lists enabled spawn files; it does not upload them. Select the <code>mob/</code> or <code>mobs/</code> folder too. Without the config, all selected spawn TXT files are used. With it, missing referenced files are reported after building.</p>
+</section>
 <div class="toolbar"><label>Default text encoding <select id="encoding"><option value="auto">Auto (UTF-8 / legacy)</option></select></label><button id="clear-files" class="text-button">Clear files</button></div>
 <p class="hint">Auto reads each file separately, trying UTF-8 first and reporting any legacy fallback. If text looks garbled, set the correct encoding next to that file. Your Lua and YAML files can use different encodings.</p>
 <p class="hint">For Lua/LUB and num2cardillustnametable.txt, Auto reads legacy bytes as Western (Windows-1252). All Korean text in parsed Lua fields is converted to its CP949 bytes displayed as Western filename characters, including Unicode sources and explicit Korean decoding. This is filename conversion, not English translation.</p>
 <p class="hint">Files merge from top to bottom. Put custom overrides last. Nested maps merge; lists such as drops are replaced. Include referenced files explicitly.</p>
+<p class="hint">A successful build automatically saves each populated table to <code>search-app/lib/</code>, replacing its previous file. Empty tables leave existing files untouched. The download buttons remain available.</p>
 <p class="hint">For <code>map-data.js</code>, use <strong>Choose folder</strong> to select your <code>map/</code> folder containing <code>&lt;mapname&gt;.bmp</code> files, then click <strong>Build data tables</strong> and <strong>Download map-data.js</strong>. For example, <code>prontera.bmp</code> creates <code>id: "prontera", name: "prontera", image: "prontera.bmp"</code>. Only filenames are indexed; keep the BMP images on your website separately. A parent folder containing <code>map/</code> or individually selected BMPs also work.</p>
 <p class="hint">You can also import <code>mapnametable.txt</code> alone or together with the BMPs. Matching map codes merge into one entry. Both <code>id</code> and <code>name</code> use the lowercase map code without its extension. Localized display labels are omitted.</p>
 <p class="hint">For monster artwork, add text/decompiled <code>npcidentity.lub</code> and <code>jobname.lub</code> from your client alongside <code>mob_db.yml</code>. The builder joins client IDs to sprite filenames and exports <code>spriteName</code> and <code>gif</code> in monster-data.js. NPC identity alone contains IDs, not filenames. Convert the matching ACT/SPR pairs to GIFs in Sprite studio.</p>

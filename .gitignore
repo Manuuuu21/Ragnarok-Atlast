@@ -1,0 +1,40 @@
+# Local generated databases and artwork
+/lib/
+/data/
+/exports/
+/search-app/lib/
+[iI][mM][gG]/
+/sprite/
+*.grf
+*.gpf
+*.act
+*.spr
+*.zip
+sprite-manifest.json
+extraction-report.json
+import-report.json
+export-report.txt
+filename-map.json
+
+# Optional development dependencies and temporary files
+node_modules/
+coverage/
+__pycache__/
+*.pyc
+*.log
+*.tmp
+*.bak
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+.codex/
+.agents/
+.idea/
+.vscode/
+
+# Operating-system metadata
+.DS_Store
+Thumbs.db
+desktop.ini

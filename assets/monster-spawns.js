@@ -2,7 +2,7 @@ import { isMapNameTable, isMapBitmap } from './map-data.js?v=maps-4';
 
 const normalize = path => String(path).replace(/\\/g, '/');
 export const isSpawnConfig = path => /(?:^|\/)scripts_monsters\.conf$/i.test(normalize(path));
-export const isSpawnPath = path => /(?:(?:^|\/)mobs\/|^(?:fields|dungeons)\/).*\.txt$/i.test(normalize(path));
+export const isSpawnPath = path => /(?:(?:^|\/)mobs?\/|^(?:fields|dungeons)\/).*\.txt$/i.test(normalize(path));
 
 export function acceptsSourceFile(file, folder = false) {
   const path = normalize(file.webkitRelativePath || file.name);
@@ -66,8 +66,8 @@ export function parseMonsterSpawns(text) {
 
 export function attachMonsterSpawns(files, monsters, warnings) {
   const spawnFiles = files.filter(file => file.kind === 'spawns');
-  if (!spawnFiles.length) return;
   const configs = files.filter(file => file.kind === 'spawnConfig');
+  if (!spawnFiles.length && !configs.length) return;
   const enabled = new Set(configs.flatMap(file => file.entries));
   const matched = new Set(), unknown = new Set(), totals = new Map();
   const byName = new Map(Object.values(monsters).filter(m => m.aegisName).map(m => [m.aegisName,m.id]));

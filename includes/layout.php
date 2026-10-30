@@ -12,5 +12,6 @@ function page_start($title, $active) {
 }
 function page_end($module) {
     $version = (int) filemtime(dirname(__DIR__) . '/assets/' . $module);
-    echo '</main><footer class="site-footer"><span>RAGNAROK ATLAS <span class="muted">/ Local database toolkit</span></span><span>Your files stay in your browser.</span></footer><script src="assets/vendor/jquery.min.js"></script><script src="assets/vendor/fflate.js"></script><script type="module" src="assets/' . htmlspecialchars($module, ENT_QUOTES, 'UTF-8') . '?v=' . $version . '"></script></body></html>';
+    $storageNote = $module === 'builder.js' ? 'Built tables save to search-app/lib/ on this server.' : 'Your files stay in your browser.';
+    echo '</main><footer class="site-footer"><span>RAGNAROK ATLAS <span class="muted">/ Local database toolkit</span></span><span>' . $storageNote . '</span></footer><script src="assets/vendor/jquery.min.js"></script><script src="assets/vendor/fflate.js"></script><script type="module" src="assets/' . htmlspecialchars($module, ENT_QUOTES, 'UTF-8') . '?v=' . $version . '"></script></body></html>';
 }

@@ -1,5 +1,5 @@
 // A data-only Lua table reader. Never executes Lua, functions, or expressions.
-export function parseLuaTable(text, { jobKeys = false, allowDuplicates = false } = {}) {
+export function parseLuaTable(text, { jobKeys = false, allowDuplicates = false, keyTables = new Map(), expectedGlobal } = {}) {
   let p = 0, entries = 0;
   const warnings = [];
   text = text.replace(/^\uFEFF/, '');
@@ -70,8 +70,13 @@ export function parseLuaTable(text, { jobKeys = false, allowDuplicates = false }
       let key;
       if (text[p] === '[' && !/^\[=*\[/.test(text.slice(p))) {
         p++; space();
-        const reference = jobKeys && text.slice(p).match(/^jobtbl\s*\.\s*(JT_\w+)/);
-        if (reference) { key = reference[1]; p += reference[0].length; }
+        const reference = text.slice(p).match(/^([a-zA-Z_]\w*)\s*\.\s*([a-zA-Z_]\w*)/);
+        if (reference && keyTables.has(reference[1])) {
+          const values = keyTables.get(reference[1]);
+          if (!values.has(reference[2])) fail(`Missing ${reference[1]} key ${reference[2]}`);
+          key = values.get(reference[2]); p += reference[0].length;
+        }
+        else if (reference && jobKeys && reference[1] === 'jobtbl' && /^JT_\w+$/.test(reference[2])) { key = reference[2]; p += reference[0].length; }
         else key = value(depth);
         expect(']'); expect('='); explicit = true;
       } else {
@@ -94,8 +99,9 @@ export function parseLuaTable(text, { jobKeys = false, allowDuplicates = false }
   if (text[p] !== '{') {
     const prefix = text.slice(p).match(/^(?:(?:local\s+)?([a-zA-Z_]\w*)\s*=\s*|return\s+)/);
     if (!prefix) fail('Expected an iteminfo table assignment or return table');
+    if (expectedGlobal && prefix[1] !== expectedGlobal) fail(`Expected ${expectedGlobal} table assignment`);
     p += prefix[0].length;
-  }
+  } else if (expectedGlobal) fail(`Expected ${expectedGlobal} table assignment`);
   const items = value(0);
   if (!items || typeof items !== 'object' || (Array.isArray(items) && items.length)) fail('Expected a keyed Lua table');
   space(); if (text[p] === ';') { p++; space(); }
