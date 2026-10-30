@@ -1,27 +1,42 @@
 # Ragnarok Atlas
 
-A local PHP, HTML, CSS, JavaScript, and jQuery toolkit for **rAthena Renewal** data exports and artwork. It includes a data importer, GRF extractor, and ACT/SPR-to-GIF converter.
+A local toolkit for **rAthena Renewal** with a database builder, GRF extractor, ACT/SPR-to-GIF converter, and searchable item, monster, and map database. The builder pages use PHP, HTML, CSS, JavaScript, and jQuery; Data Search and its headgear viewer use HTML, CSS, and JavaScript.
 
-## Web server requirement
+## Requirements
 
-You need a **web server with PHP support** to run this application.
+- A local web server with PHP support, such as OpenServer or XAMPP.
+- A modern browser. Open the application through HTTP(S), including localhost.
+- Matching rAthena Renewal database files and client resources for the data and artwork being generated.
 
-Node.js is **not required** to run the web application or sprite viewer. Sprite parsing, rendering, and browser exports run in JavaScript. Node.js is only used for optional command-line tools and development tests.
+The PHP server needs permission to create and write `search-app/lib/` to save generated tables automatically.
 
-## Files excluded from GitHub
+## Quick start
 
-Keep locally generated content out of version control. `.gitignore` excludes all `img/` folders (including `search-app/img/`), generated databases in `search-app/lib/` and `lib/`, local `data/` and `exports/` folders, GRF/GPF archives, extracted ACT/SPR files, ZIP exports, and generated reports.
+1. Download or clone this repository into the web server's document root. The example URLs below assume the project folder is named `ragnarok-database-builder`; adjust that part of the URL if the folder has a different name.
+2. Start the web server and open [Data Builder](http://localhost/ragnarok-database-builder/builder.php).
+3. Select the [item, monster, and map sources](#upload-guide-item-monster-and-map-data), then click **Build data tables**. Review the import report and confirm that `item-data.js`, `monster-data.js`, and `map-data.js` were saved in `search-app/lib/`. Data Search loads all three files, so all three are required to open it. If automatic saving fails, download the tables and place them in that folder manually.
+4. Open [GRF Extractor](http://localhost/ragnarok-database-builder/grf.php), select the matching `data.grf`, and export the artwork. Install the exported folders using the [destination table](#install-artwork-for-data-search) below.
+5. Open [Data Search](http://localhost/ragnarok-database-builder/search-app/index.html).
 
-After downloading the source, generate the database tables with **Data Builder** and extract your artwork with **GRF Extractor**. The builder creates `search-app/lib/` when saving tables. Create `search-app/img/` as needed for the extracted artwork, with preview sprites under `search-app/img/sprites/`, following the setup instructions below.
+## Application pages and endpoints
 
-## Application pages
-
-- `index.php`: opens Data Builder.
-- `builder.php`: import source files and export JavaScript tables.
-- `sprites.php`: preview ACT/SPR pairs and export GIFs or a ZIP.
-- `grf.php`: select data.grf, extract four texture folders, and convert monster sprites directly to GIFs.
+| Path | Purpose |
+| --- | --- |
+| [`builder.php`](builder.php) | Data Builder: import source files, save tables, and download exports. |
+| [`grf.php`](grf.php) | GRF Extractor: extract artwork, convert monster sprites to GIFs, and prepare headgear preview assets. |
+| [`sprites.php`](sprites.php) | Sprite Studio: preview extracted ACT/SPR pairs and export GIFs or a ZIP. |
+| [`search-app/index.html`](search-app/index.html) | Data Search: browse items, monsters, and maps, including headgear previews. |
+| [`index.php`](index.php) | Redirects to `builder.php` with HTTP status 302. |
+| [`search.php`](search.php) | Legacy URL that also redirects to `builder.php`. |
+| [`save-data.php`](save-data.php) | Endpoint used by Data Builder to save generated tables. |
 
 File selection, parsing, rendering, and downloads happen in the browser. After a successful build, generated tables are sent to this PHP server and saved in `search-app/lib/`.
+
+## Generated files and artwork
+
+Game artwork and generated database tables are not included in the repository. `.gitignore` excludes all `img/` folders (including `search-app/img/`), generated databases in `search-app/lib/` and `lib/`, local `data/` and `exports/` folders, GRF/GPF archives, extracted ACT/SPR files, ZIP exports, and generated reports.
+
+Data Builder creates `search-app/lib/` when saving tables. Create the artwork destination folders as needed when installing GRF exports.
 
 ## Upload guide: item, monster, and map data
 
@@ -66,7 +81,7 @@ BMPs and `mapnametable.txt` can be imported together. Matching codes merge into 
 | `jobname.lub` | Client sprite resource names used to generate each mapped monster's `spriteName` and `gif` fields. |
 | `npcidentity.lub` | Client identity constants and numeric IDs, used to connect `jobname.lub` entries to monster IDs. |
 
-Upload all three for monster data with client sprite mappings. Extract `jobname.lub` and `npcidentity.lub` from the same client as your monster sprites, normally under `data/luafiles514/lua files/datainfo/` in the GRF. Both must be readable text; decompile binary LUB files first. Text `.lua` versions with the same basenames are also supported.
+Select `mob_db.yml`, `jobname.lub`, and `npcidentity.lub` for monster data with client sprite mappings. Spawn TXT files and `scripts_monsters.conf` are optional. Extract `jobname.lub` and `npcidentity.lub` from the same client as your monster sprites, normally under `data/luafiles514/lua files/datainfo/` in the GRF. Both must be readable text; decompile binary LUB files first. Text `.lua` versions with the same basenames are also supported.
 
 Add any custom monster database overrides after the base `mob_db.yml`. The two client mapping files can appear in either order. If a monster has no matching client mapping, the builder keeps the lowercase AegisName GIF convention when available and reports missing mappings.
 
@@ -91,7 +106,7 @@ Upload the files containing the actual item tables. A Lua loader that only calls
 2. Review the source list. Put base files first and custom overrides last. Later fields override earlier fields; nested maps merge and lists are replaced.
 3. Leave encoding on **Auto** initially. Check reported legacy fallbacks and adjust an individual file's encoding if its text or filenames look wrong.
 4. Click **Build data tables**. After a successful build, each populated table automatically replaces its matching file in `search-app/lib/`. Empty tables leave installed files untouched. Include all sources needed for each table; saving replaces a whole table rather than merging it with the installed version.
-5. Review the import report for parsing warnings and save results, then open or refresh `search-app/index.html` to use the new data. The PHP server needs write access to `search-app/lib/`. Each file is validated and staged before replacement; a failed save is reported and downloads remain available. Saves are limited to 128 MB per generated table and use up to 512 MB of PHP memory for validation.
+5. Review the import report for parsing warnings and save results. Once all three tables are installed, open or refresh `search-app/index.html`. The PHP server needs write access to `search-app/lib/`. Each file is validated and staged before replacement; a failed save is reported and downloads remain available. Saves are limited to 128 MB of JSON per table. The save endpoint attempts to raise a lower PHP memory limit to 512 MB for validation.
 6. **Download monster-data.js**, **Download item-data.js**, **Download map-data.js**, and **Download tables as ZIP** remain available for backups or another website. The ZIP includes each nonempty table and the import report.
 
 ## GRF Extractor — `grf.php`
@@ -100,9 +115,26 @@ Upload the files containing the actual item tables. A Lua loader that only calls
 2. Choose the monster animation, size, speed, and background.
 3. Click **Download as ZIP** or **Extract to folder**.
 
-Outputs: `cardbmp/`, `collection/`, `item/`, `map/`, `monster/<sprite_name>.gif`, and `sprite/`. All six folders are extracted together when you start the export. Monster conversion requires matching ACT/SPR pairs. The `sprite/` row counts mapped Novice/headgear ACT/SPR pairs (two files per pair); validation updates the count after export. Both ZIP and folder exports include `sprite/base/`, `sprite/headgear/`, `sprite/manifest.json`, and `sprite/extraction-report.json`. These raw sprites retain their animation data for the viewer; monster GIF settings do not alter them.
+Export categories: `cardbmp/`, `collection/`, `item/`, `map/`, `monster/<sprite_name>.gif`, and `sprite/`. One export processes all available categories; the files produced depend on the archive's contents and validation results. Monster conversion requires matching ACT/SPR pairs. The `sprite/` row counts mapped Novice/headgear ACT/SPR pairs (two files per pair); validation updates the count after export. When preview extraction succeeds, both ZIP and folder exports include `sprite/base/`, `sprite/headgear/`, `sprite/manifest.json`, and `sprite/extraction-report.json`. These raw sprites retain their animation data for the viewer; monster GIF settings do not alter them.
 
 ZIP exports preserve original filenames and support large archives through ZIP64. Folder extraction records adjusted filenames in `filename-map.json`. Review the export report and keep the page open until completion.
+
+### Install artwork for Data Search
+
+Extract the downloaded ZIP, or use the folder created by **Extract to folder**. Copy each exported folder's contents to its destination:
+
+| Exported folder | Destination in this project |
+| --- | --- |
+| `cardbmp/` | `search-app/img/cardbmp/` |
+| `collection/` | `search-app/img/collection/` |
+| `item/` | `search-app/img/item/` |
+| `map/` | `search-app/img/map/` |
+| `monster/` | `search-app/img/monster/` |
+| `sprite/` | `search-app/img/sprites/` |
+
+The export uses singular `sprite/`; the viewer reads plural `sprites/`. Place `manifest.json`, `extraction-report.json`, `base/`, and `headgear/` directly inside `search-app/img/sprites/`, without an extra `sprite/` level. The root `sprite-manifest.json` describes monster GIF exports and is separate from the headgear viewer's `sprites/manifest.json`.
+
+Keep filenames and subfolders intact. The bundled map viewer looks for `<mapcode>.<extension>` directly in `search-app/img/map/`; BMP paths recorded by the builder may need to be arranged accordingly if the source uses nested map folders.
 
 ### Image files are separate
 
@@ -110,16 +142,7 @@ The JavaScript exports contain data and resource names, not embedded images. Use
 
 ItemInfo resource names remain in each item's `client` fields. The GRF extractor preserves client texture filenames and formats in `item/`; it does not rename them to item IDs. Card mappings only identify card illustrations. `accessoryid.lub` is not part of the supported item upload set.
 
-## Build your database
-
-1. Select the item, monster, or map files listed above, with base files first and custom overrides last.
-2. Start with **Auto** encoding; adjust individual files if text looks incorrect.
-3. Click **Build data tables** and resolve errors in the import report.
-4. Populated tables save automatically to `search-app/lib/`. Review the save results and refresh the search app. You can also download individual tables or the populated tables as ZIP for another destination.
-
-Select referenced files explicitly; Lua loaders and YAML import wrappers do not load them automatically.
-
-### JavaScript output
+## JavaScript output and data details
 
 ```js
 const itemDATA = {
@@ -174,7 +197,7 @@ Parsed Lua/LUB fields and keys convert Korean characters into CP949 bytes displa
 
 This is filename encoding conversion, not English translation. **Auto** uses Windows-1252 for legacy Lua files; YAML and card-table Unicode values retain their existing behavior.
 
-### Supported source formats
+### Data Builder source formats
 
 - **YAML:** rAthena `ITEM_DB` and `MOB_DB` files with `Body` entries. Duplicate keys produce warnings; the last value wins.
 - **Lua/LUB:** readable literal tables. Lua code is never executed; decompile binary LUB files first.
@@ -182,6 +205,8 @@ This is filename encoding conversion, not English translation. **Auto** uses Win
 - **Map names:** `mapnametable.txt` records in `map.rsw#Display name#` format, exported as `mapDATA` in `map-data.js`.
 - **Map BMPs:** `<mapcode>.bmp` images in `map/` (or selected individually), indexed by filename into `map-data.js`.
 - **Limits:** 64 MB per source file and 256 MB per build.
+
+The GRF headgear extractor has separate support for the accessory mapping tables described below.
 
 ## Convert monster sprites
 
@@ -193,7 +218,7 @@ Batch exports place one GIF per sprite in `monster/` and include a manifest and 
 
 Supports SPR 1.1, 2.0, 2.1 and ACT 1.1, 2.0–2.5. Large animations may require smaller batches or lower export sizes. For direct GRF conversion, use **GRF extractor**.
 
-### Headgear previews in the search app
+## Headgear previews in Data Search
 
 Headgear item cards display an **Item preview** below the Collection image. Choose Male or Female, rotate through eight directions, and switch between Standing and Walking. Animated previews have Play/Pause controls and pause while off screen. Reduced-motion preferences start animation paused.
 
@@ -201,11 +226,19 @@ Open **GRF extractor** (`grf.php`), choose `data.grf`, and click **Download as Z
 
 The GRF stays in the browser. Selecting it only reads the file index and accessory mapping tables; extraction starts when you click an export button. ACT/SPR pairs are validated as they are exported, and the preview catalog is included after its referenced pairs have been written. No sprite assets are uploaded to or automatically installed on the server. Texture and monster GIF exports are still available if an archive lacks the preview sources; unavailable sprites are explained in the report.
 
-For an optional command-line rebuild, use Node.js (tested with Node 24), from the project directory:
+The viewer uses each item's server `View`, falling back to client `ClassNum`. ACT anchors align the head and headgear to the body. Missing assets and items with no sprite view show an unavailable message. Scripted hat effects, garments, weapons, and equip restrictions are not simulated. Previewing an item on a Novice demonstrates its appearance, not whether that character can equip it.
+
+Serve the app over HTTP(S), including localhost. When deploying it, preserve the relative paths to the shared `assets/formats.js`, `assets/renderer.js`, and `assets/vendor/gifenc.js` modules alongside `search-app/`. The browser never downloads the GRF itself. No changes are needed to the existing item data tables.
+
+### Optional command-line sprite preparation
+
+With Node.js 24 installed, run from the project directory:
 
 ```powershell
 node tools/prepare-headgear-sprites.mjs 'C:\path\to\data.grf'
 ```
+
+The command writes preview assets directly to `search-app/img/sprites/`.
 
 Both methods read the archive without changing it and write male/female Novice bodies, default heads, available headgear ACT/SPR pairs, `manifest.json`, and `extraction-report.json`. Choose the archive again after changing your client resources. They share the same extraction rules and use the archive's `AccessoryId.lub` and `AccName.lub` tables (preferring `Datainfo/`) to resolve view IDs, extracting the male/female `data/sprite/악세사리/` resources. Compiled Lua 5.1 table assignments and readable Lua tables exported by GRF Editor are supported; Lua functions and host access are not executed. Output size varies by client and can be several hundred MB; the page loads only the sprites it displays.
 
@@ -219,15 +252,21 @@ These overrides take precedence over the archive's tables. The CLI backs up the 
 
 If the client loads additional GRFs, append `--overlay 'C:\path\to\patch.grf'` for each one, from lowest to highest priority (reverse numeric order in `DATA.INI`). Later archives replace earlier resources at the same path. The external mapping pair still takes precedence over all embedded tables.
 
-The viewer uses each item's server `View`, falling back to client `ClassNum`. ACT anchors align the head and headgear to the body. Missing assets and items with no sprite view show an unavailable message. Scripted hat effects, garments, weapons, and equip restrictions are not simulated. Previewing an item on a Novice demonstrates its appearance, not whether that character can equip it.
-
-Serve the app over HTTP(S), including localhost. When deploying it, preserve the relative paths to the shared `assets/formats.js`, `assets/renderer.js`, and `assets/vendor/gifenc.js` modules alongside `search-app/`. The browser never downloads the GRF itself. No changes are needed to the existing item data tables.
-
 ### Use the exported artwork
 
 - **Item icons:** GRF extractor preserves client texture filenames and formats in `item/`. Mapping those to ID-named PNGs, if required by your website, is a separate step.
 - **Monster animations:** the exports contain `monster/<sprite_name>.gif` and `sprite-manifest.json`. Use the mapped `gif` field in your monster data to connect artwork to records.
 - Preserve the manifest's `file`, `name`, `action`, and dimensions when using it in your destination website.
+
+## Troubleshooting
+
+| Symptom | Check |
+| --- | --- |
+| Opening `index.php` or `search.php` shows Data Builder | Both URLs redirect there. Open `search-app/index.html` for Data Search. |
+| Data Search reports that the database could not be opened | All three files must be present in `search-app/lib/`: `item-data.js`, `monster-data.js`, and `map-data.js`. |
+| Tables build successfully but are not saved | Review the import report for session or permission errors. Download the tables and copy them into `search-app/lib/` if needed. |
+| Item, monster, or map artwork is missing | Check the artwork destination table, filenames, and client/database mappings. Artwork is installed separately from the data tables. |
+| A headgear preview is unavailable | Check `search-app/img/sprites/manifest.json` and its referenced ACT/SPR files, then review `extraction-report.json` for missing mappings or sprites. |
 
 ## References and bundled libraries
 
