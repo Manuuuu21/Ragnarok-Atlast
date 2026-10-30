@@ -51,7 +51,7 @@ export async function planHeadgearSprites(archive, readEntry = readGrfEntry, map
   return { entries, names, mappingSources, pairs };
 }
 
-// Both the browser exporter and optional CLI use the same extraction/mapping rules.
+// Extract and validate preview assets for the browser exporter.
 // Destination errors must propagate; only source asset errors may be skipped.
 export async function extractHeadgearSprites(archive, savePair, progress = () => {}, readEntry = readGrfEntry, sourcePlan = null) {
   const { entries, names, mappingSources } = sourcePlan || await planHeadgearSprites(archive, readEntry);

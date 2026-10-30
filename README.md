@@ -225,31 +225,11 @@ Open **GRF extractor** (`grf.php`), choose `data.grf`, and click **Download as Z
 
 The GRF stays in the browser. Selecting it only reads the file index and accessory mapping tables; extraction starts when you click an export button. ACT/SPR pairs are validated as they are exported, and the preview catalog is included after its referenced pairs have been written. No sprite assets are uploaded to or automatically installed on the server. Texture and monster GIF exports are still available if an archive lacks the preview sources; unavailable sprites are explained in the report.
 
+GRF Extractor uses the selected archive's `AccessoryId.lub` and `AccName.lub` tables (preferring `Datainfo/`) to resolve view IDs and find the male/female `data/sprite/악세사리/` resources. Compiled Lua 5.1 table assignments and readable Lua tables exported by GRF Editor are supported; Lua functions and host access are not executed. Successful exports include male/female Novice bodies, default heads, available headgear ACT/SPR pairs, `manifest.json`, and `extraction-report.json`. Missing sprite pairs are listed in the report. Export and copy the assets again after changing client resources.
+
 The viewer uses each item's server `View`, falling back to client `ClassNum`. ACT anchors align the head and headgear to the body. Missing assets and items with no sprite view show an unavailable message. Scripted hat effects, garments, weapons, and equip restrictions are not simulated. Previewing an item on a Novice demonstrates its appearance, not whether that character can equip it.
 
 Serve the app over HTTP(S), including localhost. When deploying it, preserve the relative paths to the shared `assets/formats.js`, `assets/renderer.js`, and `assets/vendor/gifenc.js` modules alongside `search-app/`. The browser never downloads the GRF itself. No changes are needed to the existing item data tables.
-
-### Optional command-line sprite preparation
-
-With Node.js 24 installed, run from the project directory:
-
-```powershell
-node tools/prepare-headgear-sprites.mjs 'C:\path\to\data.grf'
-```
-
-The command writes preview assets directly to `search-app/img/sprites/`.
-
-Both methods read the archive without changing it and write male/female Novice bodies, default heads, available headgear ACT/SPR pairs, `manifest.json`, and `extraction-report.json`. Choose the archive again after changing your client resources. They share the same extraction rules and use the archive's `AccessoryId.lub` and `AccName.lub` tables (preferring `Datainfo/`) to resolve view IDs, extracting the male/female `data/sprite/악세사리/` resources. Compiled Lua 5.1 table assignments and readable Lua tables exported by GRF Editor are supported; Lua functions and host access are not executed. Output size varies by client and can be several hundred MB; the page loads only the sprites it displays.
-
-To rebuild the installed previews with corrected external mappings, supply both tables from the same client:
-
-```powershell
-node tools/prepare-headgear-sprites.mjs 'C:\path\to\data.grf' --accessory-id 'C:\path\to\accessoryid.lub' --acc-name 'C:\path\to\accname.lub'
-```
-
-These overrides take precedence over the archive's tables. The CLI backs up the previous catalogs, reuses unchanged sprites, and gives changed sprites new filenames before replacing the catalog. Missing sprite pairs are listed in `extraction-report.json`; mapping tables do not contain the sprite artwork itself. Browser exports continue to use the selected GRF's tables.
-
-If the client loads additional GRFs, append `--overlay 'C:\path\to\patch.grf'` for each one, from lowest to highest priority (reverse numeric order in `DATA.INI`). Later archives replace earlier resources at the same path. The external mapping pair still takes precedence over all embedded tables.
 
 ### Use the exported artwork
 
@@ -272,6 +252,6 @@ If the client loads additional GRFs, append `--overlay 'C:\path\to\patch.grf'` f
 - ACT / SPR layouts: [Ragnarok Research Lab](https://ragnarokresearchlab.github.io/file-formats/).
 - GRF layout: [Ragnarok Research Lab](https://ragnarokresearchlab.github.io/file-formats/grf/). Standard GRF DES decoder adapted from [grf-loader](https://github.com/vthibault/grf-loader) (MIT); attribution and license are in `assets/vendor/grf-des-LICENSE.txt`.
 - GRF 3.0/protected-record format reference: [GRF Editor](https://github.com/Tokeiburu/GRFEditor/tree/main/GRF/Core). The browser decoder uses native WebCrypto and locally bundled [hash-wasm 4.12.0](https://github.com/Daninet/hash-wasm/tree/v4.12.0); its MIT license and embedded xxHash BSD notices are in `assets/vendor/hash-wasm-LICENSE.txt` and `assets/vendor/hash-wasm-xxhash-LICENSE.txt`.
-- Streaming ZIP64 export: [zip.js 2.20.0](https://github.com/gildas-lormeau/zip.js/tree/v2.20.0), bundled native ES module; BSD-3-Clause license in `assets/vendor/zip-LICENSE.txt`. No runtime CDN or npm install is required.
+- Streaming ZIP64 export: [zip.js 2.20.0](https://github.com/gildas-lormeau/zip.js/tree/v2.20.0), bundled native ES module; BSD-3-Clause license in `assets/vendor/zip-LICENSE.txt`.
 - rAthena fields: [Renewal item database](https://github.com/rathena/rathena/blob/master/db/re/item_db.yml) and [monster database](https://github.com/rathena/rathena/blob/master/db/re/mob_db.yml).
 - [jQuery 3.7.1](https://jquery.com/), [js-yaml 4.1.1](https://github.com/nodeca/js-yaml), [gifenc 1.0.3](https://github.com/mattdesl/gifenc), and [fflate 0.8.2](https://github.com/101arrowz/fflate). Their MIT license files are distributed alongside the libraries.
