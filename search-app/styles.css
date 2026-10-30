@@ -18,6 +18,7 @@
 
 .no-drop-result{color:#c62828;font-size:12px}
 .map-spawns{margin-top:20px;border-top:1px solid var(--line);padding-top:16px}.map-spawns h4{font-size:12px;font-weight:600;margin:0 0 8px}.map-spawns table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}.map-spawns th,.map-spawns td{padding:7px 0;border-bottom:1px solid #f0f2f5;text-align:left;vertical-align:top}.map-spawns th{font-size:10px;font-weight:500;color:var(--muted)}.map-spawns th:nth-child(2),.map-spawns td:nth-child(2){text-align:right;width:22%;padding-left:8px;font-variant-numeric:tabular-nums}.map-spawns th:last-child,.map-spawns td:last-child{text-align:right;width:43%;padding-left:12px;font-variant-numeric:tabular-nums}.spawn-time-breakdown{display:block;font-size:10px;color:var(--muted);line-height:1.5}.map-spawns .spawn-time-note{margin-top:10px;font-size:10px;color:var(--muted)}.map-spawns code{font-family:Consolas,monospace}.map-spawns .unavailable{font-size:11px}
+.map-spawns > .unavailable{color:#c62828}
 .show-more-drops{display:block;width:100%;margin-top:12px}
 .map-spawns .drop-link,.map-spawns .drop-link:hover{text-decoration:none}
 .show-more-maps{display:block;width:100%;margin-top:12px}

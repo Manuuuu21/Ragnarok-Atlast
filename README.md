@@ -247,6 +247,14 @@ Serve the app over HTTP(S), including localhost. When deploying it, preserve the
 | Item, monster, or map artwork is missing | Check the artwork destination table, filenames, and client/database mappings. Artwork is installed separately from the data tables. |
 | A headgear preview is unavailable | Check `search-app/img/sprites/manifest.json` and its referenced ACT/SPR files, then review `extraction-report.json` for missing mappings or sprites. |
 
+## License
+
+Original project code and documentation are licensed under the [MIT License](LICENSE). Copyright (c) 2026 Manuuuu21.
+
+Bundled third-party libraries retain their own licenses and copyright notices; see [assets/vendor/](assets/vendor/).
+
+Ragnarok Online game assets, GRF archives, extracted artwork and sprites, and other third-party data are not covered by this project's license. Rights to those materials remain with their respective owners.
+
 ## References and bundled libraries
 
 - ACT / SPR layouts: [Ragnarok Research Lab](https://ragnarokresearchlab.github.io/file-formats/).
