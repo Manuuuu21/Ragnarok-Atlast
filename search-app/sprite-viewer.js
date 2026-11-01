@@ -1,25 +1,20 @@
-import { parseAct, parseSpr } from '../assets/formats.js';
-import { Renderer } from '../assets/renderer.js';
-import { composePreview } from './sprite-preview-core.js?v=20261029-hidden-headgear';
+import { parseAct, parseSpr } from './sprite-runtime/formats.js';
+import { Renderer } from './sprite-runtime/renderer.js';
+import { composePreview } from './sprite-preview-core.js?v=20261101-portable';
+import { loadSpriteCatalog } from './sprite-assets.js?v=20261101-portable';
 
-const assetRoot = new URL('img/sprites/', import.meta.url);
 const directions = ['Front', 'Front left', 'Left', 'Back left', 'Back', 'Back right', 'Right', 'Front right'];
 const preferences = { gender: 'male', walking: false };
 const cache = new Map();
 let manifestPromise;
 let nextId = 0;
 function getManifest() {
-  return manifestPromise ||= fetch(new URL('manifest.json', assetRoot), { cache: 'no-cache' }).then(response => {
-    if (!response.ok) throw new Error('Sprite assets are unavailable.');
-    return response.json();
-  }).then(manifest => {
-    if (manifest.version !== 1 || !manifest.characters || !manifest.headgears) throw new Error('Sprite assets are unavailable.');
-    return manifest;
-  }).catch(error => { manifestPromise = null; throw error; });
+  return manifestPromise ||= loadSpriteCatalog().catch(error => { manifestPromise = null; throw error; });
 }
-async function loadPair(path) {
+async function loadPair(path, assetRoot) {
   if (!/^(?:base\/(?:male|female)-(?:body|head)|headgear\/\d+-(?:male|female))(?:-[a-f0-9]{64})?$/.test(path)) throw new Error('This sprite is unavailable.');
-  if (cache.has(path)) return cache.get(path);
+  const cacheKey = new URL(path, assetRoot).href;
+  if (cache.has(cacheKey)) return cache.get(cacheKey);
   const pending = Promise.all(['act', 'spr'].map(async extension => {
     const response = await fetch(new URL(`${path}.${extension}`, assetRoot));
     if (!response.ok) throw new Error('This sprite is unavailable.');
@@ -28,8 +23,8 @@ async function loadPair(path) {
     const part = { act: parseAct(act), spr: parseSpr(spr) };
     part.renderer = new Renderer(part.spr);
     return part;
-  }).catch(error => { cache.delete(path); throw error; });
-  cache.set(path, pending);
+  }).catch(error => { cache.delete(cacheKey); throw error; });
+  cache.set(cacheKey, pending);
   if (cache.size > 20) cache.delete(cache.keys().next().value);
   return pending;
 }
@@ -114,7 +109,7 @@ class HeadgearViewer extends HTMLElement {
       return;
     }
     try {
-      const manifest = await getManifest();
+      const { manifest, root } = await getManifest();
       if (!this.isConnected || generation !== this.generation) return;
       const headgear = manifest.headgears[view]?.[this.gender];
       if (!headgear) {
@@ -122,7 +117,7 @@ class HeadgearViewer extends HTMLElement {
         return;
       }
       const character = manifest.characters[this.gender];
-      const parts = await Promise.all([character?.body, character?.head, headgear].map(loadPair));
+      const parts = await Promise.all([character?.body, character?.head, headgear].map(path => loadPair(path, root)));
       if (!this.isConnected || generation !== this.generation) return;
       this.parts = parts;
       this.prepare();

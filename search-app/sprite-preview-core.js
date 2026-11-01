@@ -1,4 +1,4 @@
-import { measure } from '../assets/renderer.js';
+import { measure } from './sprite-runtime/renderer.js';
 
 // Standing ACT frames are grouped by three look directions, not a looping nod.
 export function standingFrameCount(action) {

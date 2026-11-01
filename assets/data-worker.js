@@ -5,7 +5,7 @@ import { decodeSource } from './text-decoder.js';
 self.onmessage = async ({data}) => {
   const parsed = [], errors = [], decoding = [];
   for (let i = 0; i < data.files.length; i++) {
-    const file = data.files[i], name = file.webkitRelativePath || file.name;
+    const file = data.files[i], name = data.filePaths?.[i] || file.webkitRelativePath || file.name;
     try {
       if (file.size > 64*1024*1024) throw new Error('File exceeds 64 MB.');
       if (isMapBitmap(name)) {
@@ -23,7 +23,7 @@ self.onmessage = async ({data}) => {
     } catch (e) { errors.push(`${name}: ${e.message}`); }
     self.postMessage({type:'progress',done:i+1,total:data.files.length});
   }
-  const checklist = inspectUploads(data.files, parsed);
+  const checklist = inspectUploads(data.files.map((file, i) => ({ name: file.name, webkitRelativePath: data.filePaths?.[i] || file.webkitRelativePath })), parsed);
   if (errors.length) { self.postMessage({type:'errors',errors,decoding,checklist}); return; }
   try {
     const tables = buildTables(parsed);

@@ -113,7 +113,41 @@
 .report-panel .report-output:focus-visible { outline: 2px solid #80dfb2; outline-offset: -4px; }
 .report-panel .report-output::selection,
 .report-panel .report-output ::selection { background: #345a50; color: #fff; }
+.site-header nav .nav-settings {
+  display: flex; align-items: center; border: 0; border-bottom: 3px solid transparent;
+  padding: 3px 0 0; background: transparent; color: var(--muted); font-size: 13px;
+}
+.site-header nav .nav-settings:hover { color: var(--teal); }
+.upload-zone { position: relative; }
+.upload-zone .drop-overlay { display: none; }
+.upload-zone.is-dragover { border: 2px dashed var(--teal); background: #e1f3ed; box-shadow: 0 0 0 4px #087d7014; }
+.upload-zone.is-dragover .drop-overlay {
+  display: flex; align-items: center; justify-content: center; position: absolute; inset: 0;
+  padding: 24px; border-radius: 8px; background: #e1f3edf5; color: var(--teal-dark);
+  font-size: 18px; font-weight: 650; pointer-events: none; z-index: 1;
+}
+.upload-zone.is-busy { opacity: .65; }
+.upload-zone .upload-status { margin: 16px 0 0; color: var(--teal-dark); font-size: 12px; overflow-wrap: anywhere; }
+.settings-dialog {
+  width: min(520px, calc(100% - 32px)); max-height: calc(100% - 32px); padding: 0;
+  border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: var(--paper);
+  box-shadow: 0 22px 70px #102d3640;
+}
+.settings-dialog::backdrop { background: #142e3866; }
+.settings-close { font-size: 25px; line-height: 1; padding: 3px 7px; }
+.settings-option {
+  display: flex; align-items: flex-start; gap: 12px; padding: 16px;
+  border: 1px solid #d4e7e1; border-radius: 8px; background: var(--soft);
+  font-size: 13px; font-weight: 600; line-height: 1.6; cursor: pointer;
+}
+.settings-option input { flex: 0 0 auto; width: 18px; height: 18px; margin: 1px 0 0; padding: 0; accent-color: var(--teal); }
+.settings-option code, .settings-dialog .hint code { overflow-wrap: anywhere; }
+.settings-dialog .hint { margin: 14px 0 0; }
+.settings-dialog .panel-body > .hint { font-size: 12px; }
+.settings-actions { display: flex; justify-content: flex-end; }
 @media (max-width: 780px) {
+  .site-header nav { flex-wrap: wrap; gap: 12px 20px; }
+  .site-header nav .nav-settings { padding-bottom: 8px; }
   .report-panel > .report-heading { flex-wrap: wrap; gap: 8px 10px; padding: 14px 16px; }
   .report-panel > .report-heading .muted { flex-basis: 100%; margin-left: 0; }
   .report-panel > .report-output { padding: 16px; }

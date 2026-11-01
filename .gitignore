@@ -17,6 +17,8 @@ export-report.txt
 filename-map.json
 
 # Optional development dependencies and temporary files
+/test/
+/tests/
 node_modules/
 coverage/
 __pycache__/

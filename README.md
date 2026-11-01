@@ -29,7 +29,7 @@ The PHP server needs permission to create and write `search-app/lib/` to save ge
 | [`index.php`](index.php) | Redirects to `builder.php` with HTTP status 302. |
 | [`save-data.php`](save-data.php) | Endpoint used by Data Builder to save generated tables. |
 
-File selection, parsing, rendering, and downloads happen in the browser. After a successful build, generated tables are sent to this PHP server and saved in `search-app/lib/`.
+File selection, parsing, rendering, and downloads happen in the browser. **Settings → Save data directly to search-app/lib/** controls whether a successful build sends generated tables to this PHP server and saves them in that folder. It is enabled by default and remembered in this browser. Uncheck it to build and download tables without changing the installed files.
 
 ## Generated files and artwork
 
@@ -40,6 +40,8 @@ Data Builder creates `search-app/lib/` when saving tables. Create the artwork de
 ## Upload guide: item, monster, and map data
 
 Open [Data Builder](http://localhost/ragnarok-database-builder/builder.php) and select the files for the export you need. You can combine sources to build all three tables; importing items with monsters also resolves item references in monster drops. Use Renewal server databases and client files that match your game installation.
+
+Drag files or folders onto the source upload area, or use **Choose files** and **Choose folder**. Dropped folders include their subfolders and preserve relative paths for maps, spawn files, and custom overrides. The same source filters apply to dropped and selected files. Repeated paths replace the earlier selection; files in `import/` remain last. Wait for an active import or build to finish before adding more sources. If your browser cannot read a dropped folder, use **Choose folder**.
 
 The **Upload checklist** updates as files are added, removed, or cleared. It shows selected and missing guide sources for items, monsters, and maps, with optional card illustrations and spawn files labeled separately. Warnings apply to the data sets you selected; partial builds remain available. Filename checks accept case differences, `.yaml` databases, and readable `.lua` client mappings. File contents are validated during the build, and missing-upload reminders are included in the import report and its ZIP copy. A map BMP selection is accepted as an alternative to `mapnametable.txt`.
 
@@ -104,7 +106,7 @@ Upload the files containing the actual item tables. A Lua loader that only calls
 1. Click **Choose files** and select the applicable files above, or use **Choose folder**. Use **Choose files** for custom filenames that the folder filter does not include.
 2. Review the source list. Put base files first and custom overrides last. Later fields override earlier fields; nested maps merge and lists are replaced.
 3. Leave encoding on **Auto** initially. Check reported legacy fallbacks and adjust an individual file's encoding if its text or filenames look wrong.
-4. Click **Build data tables**. After a successful build, each populated table automatically replaces its matching file in `search-app/lib/`. Empty tables leave installed files untouched. Include all sources needed for each table; saving replaces a whole table rather than merging it with the installed version.
+4. Click **Build data tables**. With direct saving enabled in **Settings** (the default), each populated table automatically replaces its matching file in `search-app/lib/` after a successful build. When disabled, no tables are written to that folder; use the download buttons. Empty tables leave installed files untouched. Include all sources needed for each table; saving replaces a whole table rather than merging it with the installed version.
 5. Review the import report for parsing warnings and save results. Once all three tables are installed, open or refresh `search-app/index.html`. The PHP server needs write access to `search-app/lib/`. Each file is validated and staged before replacement; a failed save is reported and downloads remain available. Saves are limited to 128 MB of JSON per table. The save endpoint attempts to raise a lower PHP memory limit to 512 MB for validation.
 6. **Download monster-data.js**, **Download item-data.js**, **Download map-data.js**, and **Download tables as ZIP** remain available for backups or another website. The ZIP includes each nonempty table and the import report.
 
@@ -129,9 +131,9 @@ Extract the downloaded ZIP, or use the folder created by **Extract to folder**. 
 | `item/` | `search-app/img/item/` |
 | `map/` | `search-app/img/map/` |
 | `monster/` | `search-app/img/monster/` |
-| `sprite/` | `search-app/img/sprites/` |
+| `sprite/` | `search-app/img/sprite/` (existing `img/sprites/` installations also work) |
 
-The export uses singular `sprite/`; the viewer reads plural `sprites/`. Place `manifest.json`, `extraction-report.json`, `base/`, and `headgear/` directly inside `search-app/img/sprites/`, without an extra `sprite/` level. The root `sprite-manifest.json` describes monster GIF exports and is separate from the headgear viewer's `sprites/manifest.json`.
+Copy the exported `sprite/` folder directly into the search app's `img/` folder. The viewer also supports existing `img/sprites/` installations, which take priority when both catalogs exist. Each folder contains `manifest.json`, `extraction-report.json`, `base/`, and `headgear/`; do not add an extra nested `sprite/` level. The root `sprite-manifest.json` describes monster GIF exports and is separate from the headgear viewer's catalog.
 
 Keep filenames and subfolders intact. The bundled map viewer looks for `<mapcode>.<extension>` directly in `search-app/img/map/`; BMP paths recorded by the builder may need to be arranged accordingly if the source uses nested map folders.
 
@@ -221,7 +223,7 @@ Supports SPR 1.1, 2.0, 2.1 and ACT 1.1, 2.0–2.5. Large animations may require 
 
 Headgear item cards display an **Item preview** below the Collection image. Choose Male or Female, rotate through eight directions, and switch between Standing and Walking. Animated previews have Play/Pause controls and pause while off screen. Reduced-motion preferences start animation paused.
 
-Open **GRF extractor** (`grf.php`), choose `data.grf`, and click **Download as ZIP** (or **Extract to folder**). The export includes Novice/headgear assets under `sprite/` alongside the other artwork folders. Copy the contents of the exported `sprite/` folder into `search-app/img/sprites/`, then refresh the search app.
+Open **GRF extractor** (`grf.php`), choose `data.grf`, and click **Download as ZIP** (or **Extract to folder**). The export includes Novice/headgear assets under `sprite/` alongside the other artwork folders. Copy that whole folder into the search app's `img/` folder, then refresh the search app. Existing installations in `img/sprites/` remain supported and take priority; update that folder instead if you already use it.
 
 The GRF stays in the browser. Selecting it only reads the file index and accessory mapping tables; extraction starts when you click an export button. ACT/SPR pairs are validated as they are exported, and the preview catalog is included after its referenced pairs have been written. No sprite assets are uploaded to or automatically installed on the server. Texture and monster GIF exports are still available if an archive lacks the preview sources; unavailable sprites are explained in the report.
 
@@ -229,7 +231,7 @@ GRF Extractor uses the selected archive's `AccessoryId.lub` and `AccName.lub` ta
 
 The viewer uses each item's server `View`, falling back to client `ClassNum`. ACT anchors align the head and headgear to the body. Missing assets and items with no sprite view show an unavailable message. Scripted hat effects, garments, weapons, and equip restrictions are not simulated. Previewing an item on a Novice demonstrates its appearance, not whether that character can equip it.
 
-Serve the app over HTTP(S), including localhost. When deploying it, preserve the relative paths to the shared `assets/formats.js`, `assets/renderer.js`, and `assets/vendor/gifenc.js` modules alongside `search-app/`. The browser never downloads the GRF itself. No changes are needed to the existing item data tables.
+Serve the app over HTTP(S), including localhost. The entire `search-app/` folder is portable: copy or rename it to `Ragnarok Data Search/` (or another name), keeping `sprite-runtime/`, the viewer files, `lib/`, and `img/` together. The viewer no longer depends on the builder's parent `assets/` folder. Builder and GRF tools reuse the same sprite runtime through compatibility modules. The browser never downloads the GRF itself. No changes are needed to the existing item data tables.
 
 ### Use the exported artwork
 
@@ -243,9 +245,9 @@ Serve the app over HTTP(S), including localhost. When deploying it, preserve the
 | --- | --- |
 | Opening `index.php` or `search.php` shows Data Builder | Both URLs redirect there. Open `search-app/index.html` for Data Search. |
 | Data Search reports that the database could not be opened | All three files must be present in `search-app/lib/`: `item-data.js`, `monster-data.js`, and `map-data.js`. |
-| Tables build successfully but are not saved | Review the import report for session or permission errors. Download the tables and copy them into `search-app/lib/` if needed. |
+| Tables build successfully but are not saved | Check that direct saving is enabled in Settings, then review the import report for session or permission errors. Download the tables and copy them into `search-app/lib/` if needed. |
 | Item, monster, or map artwork is missing | Check the artwork destination table, filenames, and client/database mappings. Artwork is installed separately from the data tables. |
-| A headgear preview is unavailable | Check `search-app/img/sprites/manifest.json` and its referenced ACT/SPR files, then review `extraction-report.json` for missing mappings or sprites. |
+| A headgear preview is unavailable | Keep `sprite-runtime/` with the search app. Check `img/sprite/manifest.json` (or the existing `img/sprites/manifest.json`) and its referenced ACT/SPR files, then review `extraction-report.json` for missing mappings or sprites. |
 
 ## License
 
