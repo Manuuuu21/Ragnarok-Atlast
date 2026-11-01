@@ -1,6 +1,6 @@
 // Read the straight-line table assignments in Gravity's Lua 5.1 accessory tables.
 // No Lua runtime, function calls, jumps, or access to host globals is permitted.
-export function readAccessoryLub(bytes, globals = new Map()) {
+export function readAccessoryLub(bytes, globals = new Map(), { allowedGlobals = ['ACCESSORY_IDs', 'AccNameTable'], allowLists = false } = {}) {
   const data = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   let offset = 0;
   const need = length => {
@@ -71,13 +71,22 @@ export function readAccessoryLub(bytes, globals = new Map()) {
       registers[a] = table.get(key);
     } else if (op === 7) {
       const name = constant(bx);
-      if (!['ACCESSORY_IDs', 'AccNameTable'].includes(name) || !(register(a) instanceof Map)) throw new Error('Unsupported accessory global.');
+      if (!allowedGlobals.includes(name) || !(register(a) instanceof Map)) throw new Error('Unsupported accessory global.');
       globals.set(name, register(a));
     } else if (op === 9) {
       const table = register(a), key = operand(b), value = operand(c);
       if (!(table instanceof Map) || !['string', 'number'].includes(typeof key) || !['string', 'number'].includes(typeof value)) throw new Error('Invalid accessory table entry.');
       table.set(key, value);
     } else if (op === 10) registers[a] = new Map();
+    else if (op === 34 && allowLists && b > 0 && c > 0) {
+      const table = register(a);
+      if (!(table instanceof Map)) throw new Error('Invalid LUB list.');
+      for (let index = 1; index <= b; index++) {
+        const value = register(a + index);
+        if (!['string', 'number'].includes(typeof value)) throw new Error('Invalid LUB list entry.');
+        table.set((c - 1) * 50 + index, value);
+      }
+    }
     else if (op === 30 && b === 1) returned = true;
     else throw new Error(`Unsupported instruction ${op} in accessory table; only literal table assignments are supported.`);
   }

@@ -1,5 +1,5 @@
 // A data-only Lua table reader. Never executes Lua, functions, or expressions.
-export function parseLuaTable(text, { jobKeys = false, allowDuplicates = false, keyTables = new Map(), expectedGlobal } = {}) {
+export function parseLuaTable(text, { jobKeys = false, allowDuplicates = false, keyTables = new Map(), expectedGlobal, allowList = false, remainingText = false } = {}) {
   let p = 0, entries = 0;
   const warnings = [];
   text = text.replace(/^\uFEFF/, '');
@@ -48,6 +48,13 @@ export function parseLuaTable(text, { jobKeys = false, allowDuplicates = false, 
     else if (text[p] === '"' || text[p] === "'") result = quoted();
     else if (text[p] === '[') { result = longString(); if (result === null) fail('Expected Lua string'); }
     else {
+      const reference = text.slice(p).match(/^([a-zA-Z_]\w*)\s*\.\s*([a-zA-Z_]\w*)/);
+      if (reference && keyTables.has(reference[1])) {
+        const values = keyTables.get(reference[1]);
+        if (!values.has(reference[2])) fail(`Missing ${reference[1]} key ${reference[2]}`);
+        p += reference[0].length;
+        return values.get(reference[2]);
+      }
       const token = text.slice(p).match(/^(?:-?(?:0x[\da-f]+|\d+(?:\.\d+)?(?:e[+-]?\d+)?)|true\b|false\b|nil\b)/i);
       if (!token) fail('Unsupported Lua expression; use a literal iteminfo table');
       p += token[0].length;
@@ -103,11 +110,11 @@ export function parseLuaTable(text, { jobKeys = false, allowDuplicates = false, 
     p += prefix[0].length;
   } else if (expectedGlobal) fail(`Expected ${expectedGlobal} table assignment`);
   const items = value(0);
-  if (!items || typeof items !== 'object' || (Array.isArray(items) && items.length)) fail('Expected a keyed Lua table');
+  if (!items || typeof items !== 'object' || (!allowList && Array.isArray(items) && items.length)) fail('Expected a keyed Lua table');
   space(); if (text[p] === ';') { p++; space(); }
   const trailing = text.slice(p).trim();
   if (trailing) warnings.push('Lua code after the literal table was not executed. Only the table contents were imported.');
-  return { items, warnings };
+  return { items, warnings, ...(remainingText ? { remaining: trailing } : {}) };
 }
 
 export function parseItemInfo(text) {

@@ -409,17 +409,19 @@
     const dropRateNote = s.Drops?.length || s.MvpDrops?.length ? '<p class="source-note">Drop rates use source database values; server rates may vary.</p>' : '';
     return `<div class="other-details"><section class="details-box" aria-label="Other details for ${escape(clean(record.name))}"><h4>Other details</h4>${stats(kind === 'item' ? itemPairs : monsterPairs)}${noteHTML ? `<div class="detail-notes">${noteHTML}</div>` : ''}${scripts}${kind === 'monster' ? drops(s.Drops,'Item drops')+drops(s.MvpDrops,'MVP rewards')+dropRateNote+mapSpawns(record) : droppedBy(record)}<p class="source-note source-reference">Source: ${escape((record.sources || []).join(', ') || 'Local database')}</p></section></div>`;
   }
-  function headgearPreview(record) {
-    if (state.kind !== 'item' || record.server?.Type !== 'Armor' ||
-      ![...headgearLocations.values()].flat().some(slot => record.server?.Locations?.[slot] === true)) return '';
+  function equipmentPreview(record) {
+    if (state.kind !== 'item' || record.server?.Type !== 'Armor') return '';
+    const garment = record.server?.Locations?.Costume_Garment === true;
+    if (!garment && ![...headgearLocations.values()].flat().some(slot => record.server?.Locations?.[slot] === true)) return '';
     const view = Number(record.server?.View || record.client?.ClassNum || 0);
-    return `<headgear-viewer view-id="${Number.isSafeInteger(view) ? view : 0}" item-name="${escape(clean(record.name))}"></headgear-viewer>`;
+    const tag = garment ? 'garment-viewer' : 'headgear-viewer';
+    return `<${tag} view-id="${Number.isSafeInteger(view) ? view : 0}" item-name="${escape(clean(record.name))}"></${tag}>`;
   }
   function detailedResult(record) {
     if (state.kind === 'map') return mapResult(record);
     const s = record.server || {};
     const slots = s.Slots ?? record.client?.slotCount;
-    return `<article class="result" aria-labelledby="name-${record.id}"><div class="result-card"><header class="result-header">${state.kind === 'item' ? `<div class="item-icon">${art(record,state.kind)}</div>` : ''}<div class="result-heading"><h3 class="${state.kind === 'item' ? 'item-name' : 'monster-name'}" id="name-${record.id}">${escape(clean(record.name))}${state.kind === 'item' && slots > 0 ? ` <span class="slots">[${slots}]</span>` : ''}</h3>${record.aegisName ? `<div class="aegis-name">${escape(record.aegisName)}</div>` : ''}<span class="id">#${record.id}</span></div><span class="badge">${escape(state.kind === 'item' ? s.Type || 'Unspecified' : s.Race || 'Monster')}</span></header><div class="result-body"><figure class="collection"><figcaption>${state.kind === 'item' ? record.cardBmp ? 'Card illustration' : 'Collection image' : 'Monster sprite'}</figcaption><div class="collection-image">${art(record,state.kind,true)}</div>${headgearPreview(record)}</figure><div class="description">${description(record,state.kind)}${details(record,state.kind)}</div></div></div></article>`;
+    return `<article class="result" aria-labelledby="name-${record.id}"><div class="result-card"><header class="result-header">${state.kind === 'item' ? `<div class="item-icon">${art(record,state.kind)}</div>` : ''}<div class="result-heading"><h3 class="${state.kind === 'item' ? 'item-name' : 'monster-name'}" id="name-${record.id}">${escape(clean(record.name))}${state.kind === 'item' && slots > 0 ? ` <span class="slots">[${slots}]</span>` : ''}</h3>${record.aegisName ? `<div class="aegis-name">${escape(record.aegisName)}</div>` : ''}<span class="id">#${record.id}</span></div><span class="badge">${escape(state.kind === 'item' ? s.Type || 'Unspecified' : s.Race || 'Monster')}</span></header><div class="result-body"><figure class="collection"><figcaption>${state.kind === 'item' ? record.cardBmp ? 'Card illustration' : 'Collection image' : 'Monster sprite'}</figcaption><div class="collection-image">${art(record,state.kind,true)}</div>${equipmentPreview(record)}</figure><div class="description">${description(record,state.kind)}${details(record,state.kind)}</div></div></div></article>`;
   }
   function compactResult(record) {
     const s = record.server || {};

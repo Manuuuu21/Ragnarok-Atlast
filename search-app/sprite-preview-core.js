@@ -20,22 +20,23 @@ function isHiddenHeadgearPlaceholder(spr, layer) {
     && Math.abs(layer.sx) <= 1 && Math.abs(layer.sy) <= 1;
 }
 
-// Parts are ordered body, head, headgear. They retain separate SPR palettes.
-export function composePreview(parts, direction, walking = false) {
+// Parts are body, head, and equipment, each with its own SPR palette.
+export function composePreview(parts, direction, walking = false, { kind = 'headgear', topLayer = false } = {}) {
   if (!Number.isInteger(direction) || direction < 0 || direction > 7 || parts.length !== 3) throw new Error('Invalid character preview.');
   const actions = parts.map(part => part.act.actions[(walking ? 8 : 0) + direction]);
   if (actions.some(action => !action?.frames.length)) throw new Error('This pose is unavailable.');
-  const count = walking ? actions[0].frames.length : standingFrameCount(actions[2]);
+  const garment = kind === 'garment';
+  const count = walking ? actions[0].frames.length : garment ? 1 : standingFrameCount(actions[2]);
   if (!count || count > 300) throw new Error('This animation is too large to preview.');
   const frames = Array.from({ length: count }, (_, index) => {
     const bodyIndex = walking ? index : 0;
     const anchor = actions[0].anchors?.[bodyIndex]?.[0];
     return actions.map((action, part) => {
       const frameIndex = part === 0 ? bodyIndex : !walking && part === 1 ? 0 : index % action.frames.length;
-      const layers = part === 2
+      const layers = part === 2 && !garment
         ? action.frames[frameIndex].filter(layer => !isHiddenHeadgearPlaceholder(parts[part].spr, layer))
         : action.frames[frameIndex];
-      return part === 0 ? layers : anchoredLayers(layers, action.anchors?.[frameIndex]?.[0], anchor);
+      return part === 0 || garment && part === 2 ? layers : anchoredLayers(layers, action.anchors?.[frameIndex]?.[0], anchor);
     });
   });
   const boxes = parts.flatMap((part, index) => {
@@ -52,5 +53,10 @@ export function composePreview(parts, direction, walking = false) {
   // Center every frame in the same canvas; CSS fits unusually large accessories.
   const scale = 2;
   if (width > 2048 || height > 2048 || width * height > 1000000) throw new Error('This sprite is too large to preview.');
-  return { frames, bounds: { minX, minY, width: width * scale, height: height * scale, scale }, delay: Math.max(24, actions[walking ? 0 : 2].delay) };
+  let order = [0, 1, 2];
+  if (garment) {
+    const rear = direction >= 3 && direction <= 5;
+    order = rear ? (topLayer ? [0, 1, 2] : [0, 2, 1]) : [2, 0, 1];
+  }
+  return { frames, order, bounds: { minX, minY, width: width * scale, height: height * scale, scale }, delay: Math.max(24, actions[walking ? 0 : 2].delay) };
 }

@@ -2,6 +2,7 @@ import { legacyLuaText } from './lua-legacy.js';
 import { parseAct, parseSpr } from './formats.js';
 import { readAccessoryTable } from './accessory-tables.js';
 import { readGrfEntry } from './grf-core.js?v=5';
+import { garmentEntry, planGarmentSprites } from './garment-extraction.js?v=1';
 
 const basePaths = new Map();
 for (const [gender, sex] of [['male', '남'], ['female', '여']]) {
@@ -13,9 +14,9 @@ const key = path => legacyLuaText(path).toLowerCase();
 
 export function headgearEntry(path) {
   const name = key(path);
-  return name.startsWith(accessoryPrefix.toLowerCase()) ||
+  return garmentEntry(path) || (name.startsWith(accessoryPrefix.toLowerCase()) ||
     [...basePaths.values()].some(base => name.startsWith(base.toLowerCase() + '.')) ||
-    /\/(?:accessoryid|accname)\.lub$/i.test(name) ? { kind: 'preview' } : null;
+    /\/(?:accessoryid|accname)\.lub$/i.test(name) ? { kind: 'preview' } : null);
 }
 
 // Count mapped source pairs without loading hundreds of MB of sprite data.
@@ -23,23 +24,32 @@ export function headgearEntry(path) {
 export async function planHeadgearSprites(archive, readEntry = readGrfEntry, mappingOverrides = {}) {
   const entries = new Map(archive.entries.map(entry => [key(entry.path), entry]));
   const mappings = new Map(), mappingSources = [];
+  const problems = [];
   if (Boolean(mappingOverrides.accessoryid) !== Boolean(mappingOverrides.accname)) throw new Error('Supply both accessoryid and accname overrides from the same client.');
-  for (const name of ['accessoryid', 'accname']) {
-    const globalName = name === 'accessoryid' ? 'ACCESSORY_IDs' : 'AccNameTable';
-    const override = mappingOverrides[name];
-    if (override) {
-      readAccessoryTable(override.bytes, globalName, mappings);
-      mappingSources.push(override.path);
-      continue;
+  try {
+    for (const name of ['accessoryid', 'accname']) {
+      const globalName = name === 'accessoryid' ? 'ACCESSORY_IDs' : 'AccNameTable';
+      const override = mappingOverrides[name];
+      if (override) {
+        readAccessoryTable(override.bytes, globalName, mappings);
+        mappingSources.push(override.path);
+        continue;
+      }
+      const candidates = archive.entries.filter(entry => entry.path.toLowerCase().endsWith(`/${name}.lub`));
+      const entry = candidates.find(entry => /\/datainfo\//i.test(entry.path)) || candidates[0];
+      if (!entry) throw new Error(`The archive has no ${name}.lub.`);
+      readAccessoryTable(await readEntry(archive, entry), globalName, mappings);
+      mappingSources.push(entry.path);
     }
-    const candidates = archive.entries.filter(entry => entry.path.toLowerCase().endsWith(`/${name}.lub`));
-    const entry = candidates.find(entry => /\/datainfo\//i.test(entry.path)) || candidates[0];
-    if (!entry) throw new Error(`The archive has no ${name}.lub.`);
-    readAccessoryTable(await readEntry(archive, entry), globalName, mappings);
-    mappingSources.push(entry.path);
+  } catch (error) {
+    if (mappingOverrides.accessoryid) throw error;
+    mappings.delete('AccNameTable');
+    problems.push(`Headgear: ${error.message}`);
   }
-  const names = mappings.get('AccNameTable');
-  if (!names?.size) throw new Error('No headgear mappings found.');
+  const names = mappings.get('AccNameTable') || new Map();
+  let garments = null;
+  try { garments = await planGarmentSprites(archive, readEntry); }
+  catch (error) { problems.push(`Garments: ${error.message}`); }
   const hasPair = base => entries.has(key(base + '.act')) && entries.has(key(base + '.spr'));
   for (const base of basePaths.values()) if (!hasPair(base)) throw new Error(`ACT/SPR pair missing: ${base}`);
   let pairs = basePaths.size;
@@ -47,20 +57,22 @@ export async function planHeadgearSprites(archive, readEntry = readGrfEntry, map
     if (!Number.isSafeInteger(view) || view <= 0 || typeof name !== 'string' || /[\\/\x00-\x1f]/.test(name)) continue;
     for (const sex of ['남', '여']) if (hasPair(`${accessoryPrefix}${legacyLuaText(sex)}/${legacyLuaText(sex)}${name}`)) pairs++;
   }
-  if (pairs === basePaths.size) throw new Error('No mapped headgear ACT/SPR pairs found.');
-  return { entries, names, mappingSources, pairs };
+  const previewCounts = { base: basePaths.size, headgear: pairs - basePaths.size, garment: garments?.pairs.length || 0 };
+  pairs += previewCounts.garment;
+  if (pairs === basePaths.size) throw new Error(`No mapped preview ACT/SPR pairs found. ${problems.join(' ')}`);
+  mappingSources.push(...(garments?.mappingSources || []));
+  problems.push(...(garments?.problems || []));
+  return { entries, names, mappingSources, pairs, garments, problems, previewCounts };
 }
 
 // Extract and validate preview assets for the browser exporter.
 // Destination errors must propagate; only source asset errors may be skipped.
 export async function extractHeadgearSprites(archive, savePair, progress = () => {}, readEntry = readGrfEntry, sourcePlan = null) {
-  const { entries, names, mappingSources } = sourcePlan || await planHeadgearSprites(archive, readEntry);
-  const manifest = { version: 1, characters: {}, headgears: {}, mappingSources };
-  const problems = [];
+  const { entries, names, mappingSources, garments, problems: plannedProblems = [] } = sourcePlan || await planHeadgearSprites(archive, readEntry);
+  const manifest = { version: 1, characters: {}, headgears: {}, garments: {}, mappingSources };
+  const problems = [...plannedProblems];
   let bytes = 0, pairs = 0, done = 0;
-  async function loadPair(sourceBase) {
-    const actEntry = entries.get(key(sourceBase + '.act'));
-    const sprEntry = entries.get(key(sourceBase + '.spr'));
+  async function loadPair(sourceBase, actEntry = entries.get(key(sourceBase + '.act')), sprEntry = entries.get(key(sourceBase + '.spr'))) {
     if (!actEntry || !sprEntry) throw new Error(`ACT/SPR pair missing: ${sourceBase}`);
     const [act, spr] = await Promise.all([readEntry(archive, actEntry), readEntry(archive, sprEntry)]);
     const parsed = parseAct(act.buffer.slice(act.byteOffset, act.byteOffset + act.byteLength));
@@ -96,9 +108,18 @@ export async function extractHeadgearSprites(archive, savePair, progress = () =>
       genders[gender] = await save(`headgear/${view}-${gender}`, pair);
     }
     if (Object.keys(genders).length) manifest.headgears[view] = genders;
-    progress({ done: ++done, total: names.size, pairs, headgears: Object.keys(manifest.headgears).length });
+    progress({ done: ++done, total: names.size + (garments?.pairs.length || 0), pairs, headgears: Object.keys(manifest.headgears).length });
   }
-  if (!Object.keys(manifest.headgears).length) throw new Error('No usable headgear sprites found.');
+  for (const source of garments?.pairs || []) {
+    let pair;
+    try { pair = await loadPair(source.act.path, source.act, source.spr); }
+    catch (error) { problems.push(`Garment view ${source.view} (${source.gender}): ${error.message}`); continue; }
+    const path = await save(`garment/${source.view}-${source.gender}`, pair);
+    const garment = manifest.garments[source.view] ||= { topLayer: source.topLayer };
+    garment[source.gender] = path;
+    progress({ done: ++done, total: names.size + garments.pairs.length, pairs, garments: Object.keys(manifest.garments).length });
+  }
+  if (!Object.keys(manifest.headgears).length && !Object.keys(manifest.garments).length) throw new Error('No usable preview sprites found.');
   return { manifest, report: { mappingSources, pairs, bytes, problems } };
 }
 

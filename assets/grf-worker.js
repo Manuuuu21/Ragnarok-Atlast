@@ -1,5 +1,5 @@
 import { openGrf, grfCategory, planGrfExport, readGrfEntry } from './grf-core.js?v=5';
-import { headgearEntry, planHeadgearSprites, extractHeadgearSprites } from './headgear-extraction.js?v=4';
+import { headgearEntry, planHeadgearSprites, extractHeadgearSprites } from './headgear-extraction.js?v=6';
 import { parseSpr, parseAct } from './formats.js';
 import { encodeGif } from './renderer.js';
 
@@ -27,12 +27,13 @@ self.onmessage = async ({ data }) => {
         plan.counts.sprite = spritePlan.pairs;
         plan.total += spritePlan.pairs;
       } catch (error) { plan.problems.push(`sprite/: ${error.message}`); }
-      self.postMessage({ type: 'ready', counts: plan.counts, total: plan.total, problems: plan.problems, entries: archive.count });
+      self.postMessage({ type: 'ready', counts: plan.counts, total: plan.total, previewCounts: spritePlan?.previewCounts, problems: [...plan.problems, ...(spritePlan?.problems || [])], entries: archive.count });
     } else if (data.type === 'export') {
       if (!archive || !plan) throw new Error('Choose a GRF archive first.');
       const opts = data.options;
       if (![1, 2, 3, 4].includes(opts.scale) || ![0.5, 1, 2].includes(opts.speed) || ![null, '#ffffff', '#17232c'].includes(opts.background) || !['first', 'selected'].includes(opts.mode) || !Number.isInteger(opts.action) || opts.action < 0 || opts.action > 999) throw new Error('Invalid GIF export settings.');
       const problems = [...plan.problems], manifest = [], counts = Object.fromEntries(Object.keys(plan.counts).map(key => [key, 0]));
+      const previewCounts = { base: 0, headgear: 0, garment: 0 };
       async function save(path, bytes) {
         const result = await emitFile(path, bytes);
         if (result.skipped) { problems.push(result.skipped); return null; }
@@ -54,6 +55,7 @@ self.onmessage = async ({ data }) => {
               }
             } catch (error) { destinationFailed = true; throw error; }
             counts.sprite++;
+            previewCounts[pair.path.split('/')[0]]++;
             return pair.path;
           }, () => {}, readGrfEntry, spritePlan);
         } catch (error) {
@@ -96,7 +98,7 @@ self.onmessage = async ({ data }) => {
       if (!problems.length) report.push('All selected resources exported successfully.');
       await emitFile('sprite-manifest.json', new TextEncoder().encode(JSON.stringify(manifest, null, 2)));
       await emitFile('export-report.txt', new TextEncoder().encode(report.join('\n')));
-      self.postMessage({ type: 'done', counts, successful, problems });
+      self.postMessage({ type: 'done', counts, successful, problems, previewCounts });
     }
   } catch (error) { self.postMessage({ type: 'error', message: error.message }); }
 };

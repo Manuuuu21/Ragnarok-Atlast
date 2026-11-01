@@ -15,6 +15,12 @@ function controls() {
 }
 function status(message) { $('#grf-status').text(message); }
 function report(lines) { $('#grf-report').text(lines.length ? lines.join('\n') : 'No issues reported.'); }
+function previewSummary(counts, exported = false) {
+  const headgear = counts?.headgear || 0, garment = counts?.garment || 0;
+  $('#grf-preview-summary').text(headgear || garment
+    ? `${headgear.toLocaleString()} headgear and ${garment.toLocaleString()} costume garment ACT/SPR pairs ${exported ? 'exported' : 'found'}. ${exported ? 'The preview files and sprite/manifest.json are included in the export.' : 'The preview files and sprite/manifest.json will be generated automatically when you export.'}`
+    : 'No preview sprites available in this archive. See the report for missing mappings or assets.');
+}
 async function discard(target) {
   if (!target?.zip) return;
   try { await target.zip.abort(); }
@@ -30,6 +36,7 @@ $('#grf-mode').on('change', controls);
 $('#grf-encoding').on('change', () => {
   stop('Filename encoding changed. Choose your GRF again to rescan.');
   $('#grf-summary').text('Choose archive again');
+  $('#grf-preview-summary').text('Choose your archive to scan headgear and costume garment previews.');
   for (const folder of OUTPUT_FOLDERS) $(`#grf-count-${folder}`).text('—');
 });
 $('#grf-file').on('change', function () {
@@ -38,7 +45,8 @@ $('#grf-file').on('change', function () {
   $('#grf-progress').val(0); $('#grf-summary').text(file.name); $('#grf-zip-download').prop('hidden', true);
   for (const folder of OUTPUT_FOLDERS) $(`#grf-count-${folder}`).text('—');
   report([]); status('Reading GRF file table…');
-  const activeWorker = worker = new Worker('assets/grf-worker.js?v=7', { type: 'module' });
+  $('#grf-preview-summary').text('Checking headgear and costume garment preview assets…');
+  const activeWorker = worker = new Worker('assets/grf-worker.js?v=9', { type: 'module' });
   activeWorker.onerror = event => { if (worker === activeWorker) stop(event.message || 'GRF worker failed.'); };
   activeWorker.onmessage = async ({ data }) => {
     if (worker !== activeWorker) return;
@@ -49,6 +57,7 @@ $('#grf-file').on('change', function () {
         $(`#grf-count-${folder}`).text(`${count.toLocaleString()} ${noun}${count === 1 ? '' : 's'}`);
       }
       report(data.problems);
+      previewSummary(data.previewCounts);
       status(total ? `${total.toLocaleString()} resources found. Click Download as ZIP or Extract to folder to begin.` : 'No supported resources found. Check the archive and filename encoding.');
       controls();
     } else if (data.type === 'progress') {
@@ -85,6 +94,7 @@ $('#grf-file').on('change', function () {
         if (worker !== activeWorker) return;
         report(data.problems); $('#grf-progress').val(100);
         $('#grf-count-sprite').text(`${data.counts.sprite.toLocaleString()} ${data.counts.sprite === 1 ? 'pair' : 'pairs'}`);
+        previewSummary(data.previewCounts, true);
         status(`${data.successful.toLocaleString()} resources exported${data.problems.length ? `; ${data.problems.length} ${data.problems.length === 1 ? 'issue' : 'issues'} listed in the report` : ''}. ${label}`);
       } catch (error) {
         if (worker !== activeWorker) return;

@@ -1,18 +1,19 @@
 import { parseAct, parseSpr } from './sprite-runtime/formats.js';
 import { Renderer } from './sprite-runtime/renderer.js';
-import { composePreview } from './sprite-preview-core.js?v=20261101-portable';
-import { loadSpriteCatalog } from './sprite-assets.js?v=20261101-portable';
+import { composePreview } from './sprite-preview-core.js?v=20261101-garments';
+import { loadSpriteCatalog } from './sprite-assets.js?v=20261101-garments';
 
 const directions = ['Front', 'Front left', 'Left', 'Back left', 'Back', 'Back right', 'Right', 'Front right'];
 const preferences = { gender: 'male', walking: false };
 const cache = new Map();
-let manifestPromise;
+const manifests = new Map();
 let nextId = 0;
-function getManifest() {
-  return manifestPromise ||= loadSpriteCatalog().catch(error => { manifestPromise = null; throw error; });
+function getManifest(kind) {
+  if (!manifests.has(kind)) manifests.set(kind, loadSpriteCatalog(fetch, kind).catch(error => { manifests.delete(kind); throw error; }));
+  return manifests.get(kind);
 }
 async function loadPair(path, assetRoot) {
-  if (!/^(?:base\/(?:male|female)-(?:body|head)|headgear\/\d+-(?:male|female))(?:-[a-f0-9]{64})?$/.test(path)) throw new Error('This sprite is unavailable.');
+  if (!/^(?:base\/(?:male|female)-(?:body|head)|(?:headgear|garment)\/\d+-(?:male|female))(?:-[a-f0-9]{64})?$/.test(path)) throw new Error('This sprite is unavailable.');
   const cacheKey = new URL(path, assetRoot).href;
   if (cache.has(cacheKey)) return cache.get(cacheKey);
   const pending = Promise.all(['act', 'spr'].map(async extension => {
@@ -29,10 +30,11 @@ async function loadPair(path, assetRoot) {
   return pending;
 }
 
-class HeadgearViewer extends HTMLElement {
+class EquipmentViewer extends HTMLElement {
   connectedCallback() {
     const id = `sprite-preview-${++nextId}`;
-    this.direction = 0;
+    this.kind = this.localName === 'garment-viewer' ? 'garment' : 'headgear';
+    this.direction = this.kind === 'garment' ? 4 : 0;
     this.gender = preferences.gender;
     this.walking = preferences.walking;
     this.playing = !matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -40,6 +42,8 @@ class HeadgearViewer extends HTMLElement {
     this.requested = false;
     this.innerHTML = `<h4>Item preview</h4><div class="sprite-stage"><canvas hidden role="img"></canvas><p class="sprite-status" role="status">Loading preview…</p></div><div class="sprite-settings"><label class="sr-only" for="${id}-gender">Preview character</label><select id="${id}-gender" aria-label="Preview character"><option value="male">Male</option><option value="female">Female</option></select><label class="sr-only" for="${id}-pose">Preview pose</label><select id="${id}-pose" aria-label="Preview pose"><option value="standing">Standing</option><option value="walking">Walking</option></select></div><div class="sprite-controls"><button type="button" data-turn="1" aria-label="Rotate left">↶</button><button type="button" class="sprite-play" aria-label="Pause sprite animation">Pause</button><button type="button" data-turn="-1" aria-label="Rotate right">↷</button></div><p class="sprite-direction">Front</p>`;
     this.canvas = this.querySelector('canvas');
+    this.querySelector('h4').textContent = this.kind === 'garment' ? 'Costume garment preview' : 'Item preview';
+    this.querySelector('.sprite-direction').textContent = directions[this.direction];
     this.status = this.querySelector('.sprite-status');
     this.genderSelect = this.querySelector(`#${id}-gender`);
     this.poseSelect = this.querySelector(`#${id}-pose`);
@@ -105,21 +109,23 @@ class HeadgearViewer extends HTMLElement {
     this.showError('Loading preview…');
     const view = Number(this.getAttribute('view-id'));
     if (!Number.isSafeInteger(view) || view <= 0) {
-      this.showError('This item has no headgear sprite.');
+      this.showError(`This item has no ${this.kind} sprite view.`);
       return;
     }
     try {
-      const { manifest, root } = await getManifest();
+      const { manifest, root } = await getManifest(this.kind);
       if (!this.isConnected || generation !== this.generation) return;
-      const headgear = manifest.headgears[view]?.[this.gender];
-      if (!headgear) {
-        this.showError(manifest.headgears[view] ? `No ${this.gender} preview available.` : 'No sprite available for this headgear.', true);
+      const equipment = manifest[this.kind === 'garment' ? 'garments' : 'headgears'][view];
+      const sprite = equipment?.[this.gender];
+      if (!sprite) {
+        this.showError(equipment ? `No ${this.gender} preview available.` : `No sprite available for this ${this.kind} in the extracted catalog.`, true);
         return;
       }
       const character = manifest.characters[this.gender];
-      const parts = await Promise.all([character?.body, character?.head, headgear].map(path => loadPair(path, root)));
+      const parts = await Promise.all([character?.body, character?.head, sprite].map(path => loadPair(path, root)));
       if (!this.isConnected || generation !== this.generation) return;
       this.parts = parts;
+      this.topLayer = equipment.topLayer === true;
       this.prepare();
     } catch (error) {
       if (this.isConnected && generation === this.generation) this.showError(error.message, true);
@@ -129,11 +135,11 @@ class HeadgearViewer extends HTMLElement {
     if (!this.parts) return;
     cancelAnimationFrame(this.animation);
     try {
-      this.preview = composePreview(this.parts, this.direction, this.walking);
+      this.preview = composePreview(this.parts, this.direction, this.walking, { kind: this.kind, topLayer: this.topLayer });
       this.frame = 0;
       this.status.hidden = true;
       this.canvas.hidden = false;
-      this.canvas.setAttribute('aria-label', `${this.gender === 'male' ? 'Male' : 'Female'} Novice wearing ${this.getAttribute('item-name') || 'headgear'}, ${directions[this.direction].toLowerCase()}, ${this.walking ? 'walking' : 'standing'}`);
+      this.canvas.setAttribute('aria-label', `${this.gender === 'male' ? 'Male' : 'Female'} Novice wearing ${this.getAttribute('item-name') || this.kind}, ${directions[this.direction].toLowerCase()}, ${this.walking ? 'walking' : 'standing'}`);
       this.querySelector('.sprite-direction').textContent = directions[this.direction];
       this.setControls(true);
       this.draw();
@@ -146,7 +152,7 @@ class HeadgearViewer extends HTMLElement {
   }
   draw() {
     const frame = this.preview.frames[this.frame];
-    this.parts.forEach((part, index) => part.renderer.draw(this.canvas, frame[index], this.preview.bounds, null, index === 0));
+    this.preview.order.forEach((index, position) => this.parts[index].renderer.draw(this.canvas, frame[index], this.preview.bounds, null, position === 0));
   }
   start() {
     cancelAnimationFrame(this.animation);
@@ -164,4 +170,5 @@ class HeadgearViewer extends HTMLElement {
     this.animation = requestAnimationFrame(tick);
   }
 }
-customElements.define('headgear-viewer', HeadgearViewer);
+customElements.define('headgear-viewer', class extends EquipmentViewer {});
+customElements.define('garment-viewer', class extends EquipmentViewer {});
