@@ -283,7 +283,7 @@
     if (!databases.item || !databases.monster?.droppedBy) return;
     const db = databases[state.kind];
     const words = normalize(state.query).split(' ').filter(Boolean);
-    // A numeric query is an exact ID lookup. Names accept multiple words and Aegis underscores.
+    // Numeric queries match ID prefixes as you type. Names accept multiple words and Aegis underscores.
     matches = db.records.filter(record => {
       const matchesCategory = !state.category || (state.kind === 'monster' && state.category === 'MVP'
         ? record.server?.Modes?.Mvp === true
@@ -296,7 +296,7 @@
         : state.kind === 'item' && headgearLocations.has(state.category)
         ? record.server?.Type === 'Armor' && headgearLocations.get(state.category).some(slot => record.server?.Locations?.[slot] === true)
         : category(record) === state.category);
-      return matchesCategory && (state.kind !== 'map' && /^\d+$/.test(state.query) ? String(record.id) === state.query : words.every(word => db.searchKeys.get(record.id).includes(word)));
+      return matchesCategory && (state.kind !== 'map' && /^\d+$/.test(state.query) ? String(record.id).startsWith(state.query) : words.every(word => db.searchKeys.get(record.id).includes(word)));
     });
     matches.sort(state.sort === 'id' ? (a,b) => state.kind === 'map' ? a.id.localeCompare(b.id) : a.id-b.id : (a,b) => clean(a.name).localeCompare(clean(b.name)) * (state.sort === 'name-desc' ? -1 : 1) || String(a.id).localeCompare(String(b.id), undefined, { numeric: true }));
     state.page = Math.min(state.page, Math.max(1, Math.ceil(matches.length/pageSize())));
